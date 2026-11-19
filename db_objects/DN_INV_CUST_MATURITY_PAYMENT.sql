@@ -1,0 +1,142 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_CUST_MATURITY_PAYMENT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_CUST_MATURITY_PAYMENT" 
+(
+ M_PROCESS_DATE    DN_SYS_PARAMETER.LAST_DAILY%TYPE
+)
+
+   -- Procedure    : Custodial Deal MATURITY payment
+   -- System       : Dealnet system
+   -- Created by   : V.Thilakesa.
+   -- Created on   : 30/11/1999
+
+  AS
+
+    CURSOR  SERIAL_NO IS
+
+    SELECT
+       C.CUSTODIAL_CODE,
+       C.EFF_VALDATE,C.INST_TYPE,
+       C.SECURITY_CODE,C.SERIAL_NO,
+       C.DEAL_NO,C.FACE_VAL
+    FROM
+       DN_INV_CUST_DEAL_SERIAL_NO C,
+       DN_REF_SECURITY D
+    WHERE
+       (C.DIP_WID_EFF_VALDATE IS NULL OR C.DIP_WID_EFF_VALDATE>M_PROCESS_DATE)
+       AND
+       C.EFF_VALDATE<=M_PROCESS_DATE
+       AND
+       C.SECURITY_CODE=D.SECURITY_CODE
+       AND
+       D.MATURITY_DATE=M_PROCESS_DATE;
+
+ M_SECURITY_CODE   DN_REF_SECURITY.SECURITY_CODE%TYPE;
+ M_CUSTODIAL_CODE  DN_INV_CUST_DEAL_SERIAL_NO.CUSTODIAL_CODE%TYPE;
+ M_EFF_VALDATE     DN_INV_CUST_DEAL_SERIAL_NO.EFF_VALDATE%TYPE;
+ M_INST_TYPE       DN_INV_CUST_DEAL_SERIAL_NO.INST_TYPE%TYPE;
+ M_FACE_VAL        DN_INV_CUST_DEAL_SERIAL_NO.FACE_VAL%TYPE;
+ M_DEAL_NO         DN_INV_CUST_DEAL_SERIAL_NO.DEAL_NO%TYPE;
+ M_SERIAL_NO       DN_INV_CUST_DEAL_SERIAL_NO.SERIAL_NO%TYPE;
+
+BEGIN
+
+
+   OPEN SERIAL_NO;
+
+   LOOP
+
+      FETCH  SERIAL_NO INTO
+
+      M_CUSTODIAL_CODE,M_EFF_VALDATE,M_INST_TYPE,
+      M_SECURITY_CODE,M_SERIAL_NO,M_DEAL_NO,M_FACE_VAL;
+
+      EXIT WHEN SERIAL_NO%NOTFOUND;
+
+          -- At serial number level
+
+        UPDATE DN_INV_INT_CUST_DEAL_SERNO
+           SET MATURITY_PAY=M_FACE_VAL
+        WHERE
+           PROCESS_DATE=M_PROCESS_DATE
+           AND
+           CUSTODIAL_CODE=M_CUSTODIAL_CODE
+           AND
+           EFF_VALDATE=M_EFF_VALDATE
+           AND
+           INST_TYPE=M_INST_TYPE
+           AND
+           SECURITY_CODE=M_SECURITY_CODE
+           AND
+           SERIAL_NO=M_SERIAL_NO
+           AND
+           DEAL_NO=M_DEAL_NO;
+
+     IF SQL%NOTFOUND THEN
+
+       INSERT INTO DN_INV_INT_CUST_DEAL_SERNO
+          (PROCESS_DATE, CUSTODIAL_CODE,
+           EFF_VALDATE,INST_TYPE,
+           SECURITY_CODE,
+           DEAL_NO,SERIAL_NO,
+           SCRIP_FACE_VAL,FACE_VAL,
+           COUP_INT_ACCR,
+           MATURITY_PAY,
+           SERIAL_NO_STATUS
+          )
+          SELECT
+             M_PROCESS_DATE,CUSTODIAL_CODE,
+             EFF_VALDATE,INST_TYPE,
+             SECURITY_CODE,
+             DEAL_NO,SERIAL_NO,
+             SCRIP_FACE_VAL,FACE_VAL,
+             M_FACE_VAL,
+             M_FACE_VAL,
+             SERIAL_NO_STATUS
+          FROM
+             DN_INV_CUST_DEAL_SERIAL_NO
+          WHERE
+             CUSTODIAL_CODE=M_CUSTODIAL_CODE
+             AND
+             EFF_VALDATE=M_EFF_VALDATE
+             AND
+             INST_TYPE=M_INST_TYPE
+             AND
+             SECURITY_CODE=M_SECURITY_CODE
+             AND
+             SERIAL_NO=M_SERIAL_NO
+             AND
+             DEAL_NO=M_DEAL_NO;
+
+   END IF;
+
+    UPDATE DN_INV_CUST_DEAL_SERIAL_NO A
+       SET SERIAL_NO_STATUS='MAT',
+           DIP_WID_EFF_VALDATE=M_PROCESS_DATE
+
+    WHERE
+       CUSTODIAL_CODE=M_CUSTODIAL_CODE
+       AND
+       EFF_VALDATE=M_EFF_VALDATE
+       AND
+       INST_TYPE=M_INST_TYPE
+       AND
+       SECURITY_CODE=M_SECURITY_CODE
+       AND
+       SERIAL_NO=M_SERIAL_NO
+       AND
+       DEAL_NO=M_DEAL_NO;
+
+END LOOP;
+
+    -------------ADDED BY LATHIKA ON 24/05/2000----------
+
+    DN_ACC_E_5(M_PROCESS_DATE);
+
+    -----------------------------------------------------
+END DN_INV_CUST_MATURITY_PAYMENT;
+
+/

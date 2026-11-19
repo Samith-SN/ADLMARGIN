@@ -1,0 +1,247 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_RECEIPTS_REJECT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_RECEIPTS_REJECT" 
+   (
+   M_REC_NO    dn_trn_bo_settl_receipt.rec_no%TYPE,
+   M_ACTIVE_STATUS      DN_REF_PORTFOLIO.ACTIVE_STATUS%TYPE,
+   M_USER               DN_DOC_STATUS_LOG.DN_USER%TYPE
+   )
+AS
+M_NUMBER VARCHAR(100);
+
+CURSOR M_CURSOR(MM_REC_NO DN_TRN_BO_SETTL_RECEIPT.REC_NO%TYPE) IS SELECT A.REC_NO, A.SUS_REF_NO, A.SETTLE_MODE, A.PAYER_BRANCH_CODE,
+                            A.PAYER_ACC_NO, A.PAYER_REF, A.PORTFOLIO_CODE,
+                            A.SUSPENSE_ENTRY_TYPE, A.ID_PORTFOLIO_CODE, A.REC_AMOUNT,
+                            A.OTH_COMMENTS, A.BRANCH_CODE, A.ACC_NO, A.STATUS, A.DN_USER,
+                            A.ENTDATE, A.RECON_STATUS, A.RECON_DATE, A.RECON_BY,
+                            A.EFF_VALDATE, A.REALISED_DATE, A.REC_AMOUNT_CURR,
+                            A.EXCHANGE_GAIN_LOSS, A.SELL_PORTFOLIO_CODE, A.TRNDATE,
+                            A.DN_MOD_USER, A.MODDATE, A.APP_STATUS,A.GROUP_NET_NO
+                            FROM DN_TRN_BO_SETTL_RECEIPT_TMP A
+                            WHERE APP_STATUS='ENT' 
+                            AND A.REC_NO=MM_REC_NO
+                            AND A.GROUP_NET_NO IS  NULL
+                           
+                           /* UNION ALL
+                            
+                            SELECT A.REC_NO, A.SUS_REF_NO, A.SETTLE_MODE, A.PAYER_BRANCH_CODE,
+                            A.PAYER_ACC_NO, A.PAYER_REF, A.PORTFOLIO_CODE,
+                            A.SUSPENSE_ENTRY_TYPE, A.ID_PORTFOLIO_CODE, A.REC_AMOUNT,
+                            A.OTH_COMMENTS, A.BRANCH_CODE, A.ACC_NO, A.STATUS, A.DN_USER,
+                            A.ENTDATE, A.RECON_STATUS, A.RECON_DATE, A.RECON_BY,
+                            A.EFF_VALDATE, A.REALISED_DATE, A.REC_AMOUNT_CURR,
+                            A.EXCHANGE_GAIN_LOSS, A.SELL_PORTFOLIO_CODE, A.TRNDATE,
+                            A.DN_MOD_USER, A.MODDATE, A.APP_STATUS,A.GROUP_NET_NO
+                            FROM DN_TRN_BO_NET_RECEIPT_TMP A
+                            WHERE APP_STATUS='ENT' 
+                            AND A.REC_NO=MM_REC_NO
+                            AND A.GROUP_NET_NO IS NOT NULL*/
+                            ;
+
+                    
+CURSOR M_CURSOR_2(M_GROUP_NET_NO DN_TRN_BO_SETTL_PAYMENT_TEMP.GROUP_NET_NO%TYPE)  
+IS (  
+
+ SELECT A.REC_NO ,'RECEIPT' SETTLE_TYPE
+ FROM   DN_TRN_BO_SETTL_RECEIPT_TMP A
+ WHERE GROUP_NET_NO = M_GROUP_NET_NO
+ AND APP_STATUS='ENT'
+ 
+UNION ALL
+
+  SELECT PAYMENT_NO ,'PAYMENT' SETTLE_TYPE FROM
+  DN_TRN_BO_SETTL_PAYMENT_TEMP 
+  WHERE GROUP_NET_NO = M_GROUP_NET_NO
+  AND APP_STATUS='ENT'
+
+
+
+ 
+  ) ;   
+ 
+CURSOR M_CURSOR_3(MM_PAYMENT_NO DN_TRN_BO_SETTL_PAYMENT_TEMP.PAYMENT_NO%TYPE) IS  -- GROUP OR NET SETTELEMET
+                  
+                    
+                    SELECT A.PAYMENT_NO, A.PORTFOLIO_CODE, A.SUS_REF_NO, A.SETTLE_MODE,
+                    A.ENTRY_TYPE, A.ID_PORTFOLIO_CODE, A.PAY_AMOUNT,
+                    A.LIC_BRANCH_CODE, A.LIC_ACC_NO, A.PAYEE_BRANCH_CODE,
+                    A.PAYEE_ACC_NO, A.PROCESS_STATUS, A.DN_USER, A.ENTDATE,
+                    A.RECON_STATUS, A.RECON_DATE, A.RECON_BY, A.EFF_VALDATE,
+                    A.REALISED_DATE, A.PAYEE_NAME, A.PAY_AMOUNT_CURR,
+                    A.PAY_ADVICE_STATUS, A.OTH_COMMENT, A.TRNDATE, A.CLIENT_CODE,
+                    A.DN_MOD_USER, A.MODDATE, A.APP_STATUS,A.GROUP_NET_NO
+                    FROM DN_TRN_BO_SETTL_PAYMENT_TEMP A--DN_TRN_BO_SETTL_PAYMENT_TEMP A 
+                    WHERE APP_STATUS='ENT' 
+                    AND A.PAYMENT_NO=TRIM(MM_PAYMENT_NO)
+                    AND GROUP_NET_NO IS NOT NULL ;
+                
+
+                    
+CURSOR M_CURSOR_4(MM_REC_NO DN_TRN_BO_SETTL_RECEIPT.REC_NO%TYPE) IS 
+                            SELECT A.REC_NO, A.SUS_REF_NO, A.SETTLE_MODE, A.PAYER_BRANCH_CODE,
+                            A.PAYER_ACC_NO, A.PAYER_REF, A.PORTFOLIO_CODE,
+                            A.SUSPENSE_ENTRY_TYPE, A.ID_PORTFOLIO_CODE, A.REC_AMOUNT,
+                            A.OTH_COMMENTS, A.BRANCH_CODE, A.ACC_NO, A.STATUS, A.DN_USER,
+                            A.ENTDATE, A.RECON_STATUS, A.RECON_DATE, A.RECON_BY,
+                            A.EFF_VALDATE, A.REALISED_DATE, A.REC_AMOUNT_CURR,
+                            A.EXCHANGE_GAIN_LOSS, A.SELL_PORTFOLIO_CODE, A.TRNDATE,
+                            A.DN_MOD_USER, A.MODDATE, A.APP_STATUS,A.GROUP_NET_NO
+                            FROM  DN_TRN_BO_SETTL_RECEIPT_TMP A -- DN_TRN_BO_NET_RECEIPT_TMP --change by wa
+                            WHERE APP_STATUS='ENT' 
+                            AND A.REC_NO=MM_REC_NO
+                            AND A.GROUP_NET_NO IS NOT NULL
+                            ;                    
+                    
+                    
+M_GROUP_NET_COUNT    NUMBER;
+M_GROUP_NET_MODE    DN_MAS_SETLE_GROUP_NET.GROUP_NET_MODE%TYPE;
+
+
+BEGIN
+
+
+ 
+
+ IF M_ACTIVE_STATUS='ENT' THEN
+  
+  
+  SELECT COUNT(A.GROUP_NET_MODE)
+  INTO M_GROUP_NET_COUNT
+  FROM DN_MAS_RECEIPT_GROUP_NET A 
+  WHERE A.GROUP_NET_NO = M_REC_NO; 
+  
+  IF M_GROUP_NET_COUNT > 0 THEN 
+  
+  SELECT A.GROUP_NET_MODE 
+  INTO M_GROUP_NET_MODE
+  FROM DN_MAS_RECEIPT_GROUP_NET A 
+  WHERE A.GROUP_NET_NO = M_REC_NO; 
+  
+  UPDATE DN_MAS_RECEIPT_GROUP_NET
+  SET APP_STATUS     = 'REJ'
+  WHERE GROUP_NET_NO = M_REC_NO;
+   
+  
+  END IF;
+  
+  
+   -- RAISE_APPLICATION_ERROR(-20201,'YOU CAN NOT CONFIRM  ='||M_GROUP_NET_COUNT);
+
+  
+  IF M_GROUP_NET_COUNT = 0 THEN  -- NOT A GROSS OR NET SETTLEMENT
+           
+       FOR X IN M_CURSOR(M_REC_NO) LOOP 
+           
+        EXIT WHEN M_CURSOR%NOTFOUND;
+       
+   
+       
+        
+                   
+             UPDATE DN_TRN_BO_SETTL_RECEIPT_TMP A
+              SET  A.APP_STATUS = 'REJ',
+              A.DN_MOD_USER  = M_USER,
+              A.MODDATE      = SYSDATE
+              WHERE A.REC_NO =  X.REC_NO;
+                                        
+              UPDATE DN_TRN_BO_NET_RECEIPT_TMP A
+              SET  A.APP_STATUS = 'REJ',
+              A.DN_MOD_USER  = M_USER,
+              A.MODDATE      = SYSDATE
+              WHERE A.REC_NO =  X.REC_NO;
+           
+        
+           INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+           VALUES(M_REC_NO,'RECEIPTS REJECT','REJ',M_USER,SYSDATE,'RECEIPTS REJECT-'||M_ACTIVE_STATUS);
+          
+         
+           
+         END LOOP;    
+
+----[END] NOT A GROSS OR NET SETTLEMENT 
+ELSIF(M_GROUP_NET_COUNT > 0 ) THEN     
+   
+ FOR Y IN M_CURSOR_2(M_REC_NO) LOOP 
+           
+    EXIT WHEN M_CURSOR_2%NOTFOUND;
+    
+        
+         
+      IF Y.SETTLE_TYPE='RECEIPT' THEN -- PAYMENTS
+   -- RAISE_APPLICATION_ERROR(-20201,'YOU CAN NOT CONFIRM  ='||Y.REC_NO);          
+        FOR X IN M_CURSOR_4(Y.REC_NO) LOOP   --GOING TO SETTEL NET RECEIPT OR GROSS RECEIPT
+     
+      -- RAISE_APPLICATION_ERROR(-20201,'YOU CAN NOT CONFIRM  ='||X.REC_NO);
+            
+        EXIT WHEN M_CURSOR_4%NOTFOUND;
+       
+        
+       
+        
+          
+                   
+             UPDATE DN_TRN_BO_SETTL_RECEIPT_TMP A
+              SET  A.APP_STATUS = 'REJ',
+              A.DN_MOD_USER  = M_USER,
+              A.MODDATE      = SYSDATE
+              WHERE A.REC_NO =  X.REC_NO;
+                                        
+              UPDATE DN_TRN_BO_NET_RECEIPT_TMP A
+              SET  A.APP_STATUS = 'REJ',
+              A.DN_MOD_USER  = M_USER,
+              A.MODDATE      = SYSDATE
+              WHERE A.REC_NO =  X.REC_NO;
+           
+        
+           INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+           VALUES(X.REC_NO,'RECEIPTS  REJECT','REJ',M_USER,SYSDATE,'RECEIPTS  REJECT-'||M_ACTIVE_STATUS);
+          
+          
+           
+         END LOOP;
+  --[END] RECEIPT      
+   ELSIF Y.SETTLE_TYPE='PAYMENT' THEN    
+   
+   FOR XY IN M_CURSOR_3(Y.REC_NO) LOOP 
+   EXIT WHEN M_CURSOR_3%NOTFOUND;
+         
+
+        
+          UPDATE DN_TRN_BO_SETTL_PAYMENT_TEMP A
+          SET  A.APP_STATUS = 'REJ',
+          A.DN_MOD_USER     = M_USER,
+          A.MODDATE         = SYSDATE
+          WHERE A.PAYMENT_NO =XY.PAYMENT_NO;
+          
+          UPDATE DN_TRN_BO_NET_PAYMENT_TEMP A
+          SET  A.APP_STATUS  = 'REJ',
+          A.DN_MOD_USER      = M_USER,
+          A.MODDATE          = SYSDATE
+          WHERE A.PAYMENT_NO = XY.PAYMENT_NO;
+                        
+        INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+        VALUES(XY.PAYMENT_NO,'RECEIPTS REJECT','REJ',M_USER,SYSDATE,'RECEIPTS REJECT-'||M_ACTIVE_STATUS);
+          
+        
+         END LOOP;
+         
+    END IF;--[END] RECEIPT    
+    
+      END LOOP; 
+  
+END IF;  
+
+            
+END IF; --[END] NOT A GROSS OR NET SETTLEMENT
+
+
+
+
+
+
+END DN_RECEIPTS_REJECT; 
+
+/

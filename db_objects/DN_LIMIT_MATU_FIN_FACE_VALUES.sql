@@ -1,0 +1,62 @@
+--------------------------------------------------------
+--  DDL for Function DN_LIMIT_MATU_FIN_FACE_VALUES
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_LIMIT_MATU_FIN_FACE_VALUES" 
+(
+ M_BUY_PORT_CODE         DN_TRN_OUTP_SALE.BUY_PORTFOLIO_CODE%TYPE,
+ M_SELL_PORT_CODE        DN_TRN_OUTP_SALE.SELL_PORTFOLIO_CODE%TYPE,
+ M_FACE_VAL              DN_TRN_OUTP_SALE.FACE_VALUE%TYPE
+ )
+
+ RETURN  REAL
+
+IS
+
+    -- Function     : This returns the face value depending on the Portfolio code status ;
+    -- System       : DealNet System
+    -- Created by   : Dayan
+    -- Created on   : 26/01/2000
+
+M_SIGNED_FACE_VAL    REAL;
+M_BUY_COUNT          NUMBER;
+M_SELL_COUNT         NUMBER;
+M_BUY_FVAL           NUMBER;
+M_SELL_FVAL          NUMBER;
+
+BEGIN
+
+--******************************************************
+SELECT COUNT(*) INTO M_BUY_COUNT
+FROM DN_REF_PORTFOLIO
+WHERE PORTFOLIO_CODE=M_BUY_PORT_CODE AND
+PF_TYPE='P' AND OWNED_BY_MBFSL='Y';
+--@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@
+SELECT COUNT(*) INTO M_SELL_COUNT
+FROM DN_REF_PORTFOLIO
+WHERE PORTFOLIO_CODE=M_SELL_PORT_CODE AND
+PF_TYPE='P' AND OWNED_BY_MBFSL='Y';
+
+IF(M_BUY_COUNT>0) THEN
+M_BUY_FVAL:=M_FACE_VAL;
+ELSE
+M_BUY_FVAL:=0;
+END IF;
+IF(M_SELL_COUNT>0) THEN
+M_SELL_FVAL:=-M_FACE_VAL;
+ELSE
+M_SELL_FVAL:=0;
+END IF;
+IF (M_BUY_COUNT=0 AND M_SELL_COUNT=0) THEN
+M_BUY_FVAL:=0;
+M_SELL_FVAL:=0;
+END IF;
+--RAISE_APPLICATION_ERROR(-20201,M_BUY_FVAL||' '|| M_SELL_FVAL);
+
+M_SIGNED_FACE_VAL:=M_BUY_FVAL+M_SELL_FVAL;
+
+RETURN M_SIGNED_FACE_VAL;
+
+END DN_LIMIT_MATU_FIN_FACE_VALUES;
+
+/

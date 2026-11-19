@@ -1,0 +1,54 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_WITHDRAWAL_SECOND_SIG
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_WITHDRAWAL_SECOND_SIG" 
+   (
+   M_DOCREFNO           DN_TRN_BO_CAP_DEPOSIT.DOCREFNO%TYPE,
+   M_ACTIVE_STATUS      DN_REF_PORTFOLIO.ACTIVE_STATUS%TYPE,
+   M_USER               DN_DOC_STATUS_LOG.DN_USER%TYPE
+   )
+AS
+M_NUMBER VARCHAR(100);
+
+
+/*
+CREATED BY - K. M.WARUNA SRI JAYANATH
+CREATED ON - 2012-02-27
+SYSTEM     - ADLMARGIN
+
+*/
+        
+
+
+BEGIN
+
+--RAISE_APPLICATION_ERROR(-20201,'PAYMENT INVALID='||M_PAYMENT_NO||'**'||M_ACTIVE_STATUS);
+  
+  
+ IF M_ACTIVE_STATUS='ENT' THEN
+  
+ 
+  UPDATE DN_TRN_BO_CAP_DEPOSIT
+  SET    APP_STATUS  = 'SIG2',
+         SIGNATURE_2 = M_USER
+  
+  WHERE  DOCREFNO  = M_DOCREFNO
+  AND    APP_STATUS  = 'SIG1';
+  
+  
+  UPDATE DN_TRN_BO_CAP_DEPOSIT_TEMP
+  SET    CURRENT_STATUS  = 'SIG2'
+  WHERE  DOCREFNO  = M_DOCREFNO
+  AND    CURRENT_STATUS  = 'SIG1';
+ 
+            
+END IF;
+
+
+
+
+END ; 
+
+/

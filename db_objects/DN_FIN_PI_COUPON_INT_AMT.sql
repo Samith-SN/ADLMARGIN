@@ -1,0 +1,106 @@
+--------------------------------------------------------
+--  DDL for Function DN_FIN_PI_COUPON_INT_AMT
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_FIN_PI_COUPON_INT_AMT" 
+(M_EFF_VALDATE       DN_TRN_REPO_PERIOD_INT.EFF_VALDATE%TYPE,
+ M_COUPON_INT        DN_TRN_REPO_PERIOD_INT.TENOR%TYPE,
+ M_SEQNO             VARCHAR2
+ )
+     RETURN  REAL
+
+    IS
+
+    -- Proceudre    : Accrued interest (periodic interest)
+    -- System       : DEALNET System
+    -- Created by   : V.Thilakesan.
+    -- Created on   : 13/03/2000
+
+   M_ISSUE_DATE                 DN_REF_SECURITY.ISSUE_DATE%TYPE;
+   --M_COUPON_INT                 DN_REF_SECURITY.COUPON_INT%TYPE;
+   M_ADJ_EST1_YIELD             NUMBER;
+   M_NO_DAYS_INT_ACCRUAL        NUMBER;
+   M_INT_ADJ                    NUMBER;
+   M_BOND_FACE_VALUE            NUMBER;
+   M_NO_DAYS_P_ANN              NUMBER;
+   M_NEXT_COUPON_DATE           DN_REF_SECURITY.MATURITY_DATE%TYPE;
+   M_LAST_COUPON_DATE           DN_REF_SECURITY.MATURITY_DATE%TYPE;
+
+BEGIN
+
+    M_BOND_FACE_VALUE:=100.00;  -- Allways bond face value is this
+
+    M_ISSUE_DATE:=M_EFF_VALDATE;
+    --M_NO_DAYS_P_ANN:=M_SEQNO;
+
+/*
+  SELECT
+     ISSUE_DATE,COUPON_INT
+     INTO
+     M_ISSUE_DATE,M_COUPON_INT
+  FROM
+     DN_REF_SECURITY
+  WHERE
+     SECURITY_CODE=M_SECURITY_CODE;
+*/
+
+  SELECT
+     COUNT(SEQNO) INTO M_NO_DAYS_P_ANN
+  FROM
+     DN_TRN_REPO_PERIOD_INT_DATES
+  WHERE
+     --SEQNO=M_SEQNO
+     --AND
+     PAY_DATE>=M_ISSUE_DATE
+     AND
+     PAY_DATE<=ADD_MONTHS(M_ISSUE_DATE,12);
+
+ -- Next coupon date
+
+  SELECT
+     MIN(PAY_DATE) INTO  M_NEXT_COUPON_DATE
+  FROM
+     DN_TRN_REPO_PERIOD_INT_DATES
+  WHERE
+     --SEQNO=M_SEQNO
+     --AND
+     PAY_DATE>=M_EFF_VALDATE;
+
+-- Last coupon date
+
+  SELECT
+     MAX(PAY_DATE) INTO  M_LAST_COUPON_DATE
+  FROM
+     DN_TRN_REPO_PERIOD_INT_DATES
+  WHERE
+     --SEQNO=M_SEQNO
+     --AND
+     PAY_DATE<M_EFF_VALDATE;
+
+  IF M_LAST_COUPON_DATE IS NULL THEN
+
+     ---Which is higher
+
+     M_LAST_COUPON_DATE:=M_ISSUE_DATE;
+
+  END IF;
+
+  -- Interest accural
+
+    IF M_EFF_VALDATE>=M_ISSUE_DATE THEN
+
+       M_NO_DAYS_INT_ACCRUAL:=M_EFF_VALDATE-M_LAST_COUPON_DATE;
+
+       M_INT_ADJ:=((M_BOND_FACE_VALUE*M_COUPON_INT)/M_NO_DAYS_P_ANN)/(M_NEXT_COUPON_DATE-M_LAST_COUPON_DATE)*M_NO_DAYS_INT_ACCRUAL;
+
+    ELSE
+
+      M_INT_ADJ:=0;
+
+    END IF;
+
+    RETURN ROUND(M_INT_ADJ,6);
+
+END DN_FIN_PI_COUPON_INT_AMT;
+
+/

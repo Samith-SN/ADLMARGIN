@@ -1,0 +1,49 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_DEPOSIT_SLIP_PRINT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_DEPOSIT_SLIP_PRINT" 
+
+   (M_PAY_NO          DN_TRN_BO_SETTL_RECEIPT_BULK.REC_NO%TYPE
+  
+
+   )
+AS
+
+--M_TYPE          VARCHAR2(2);
+
+BEGIN
+
+    /* PROCEDURE   -  DEPOSIT SLIP PRINT STATUS CHANGE
+       SYSTEM      -  DEALNT
+       CREATED BY  -  PRABASH.
+       CREATED ON  -  14/03/2012
+       */
+      
+
+IF SUBSTR(M_PAY_NO,1,2)='SR' THEN
+      
+   UPDATE DN_TRN_BO_SETTL_RECEIPT_BULK SET
+          VOUCHER_PRINT_STATUS='P'
+   WHERE M_PAY_NO=REC_NO ;
+
+ELSIF SUBSTR(M_PAY_NO,1,2)='GR' THEN
+
+   UPDATE DN_MAS_RECEIPT_GROUP_NET SET
+          VOUCHER_PRINT_STATUS='P'
+   WHERE M_PAY_NO=GROUP_NET_NO ;
+
+ELSIF SUBSTR(M_PAY_NO,1,2)='CD'  THEN
+
+   UPDATE DN_TRN_BO_CAP_DEPOSIT SET
+          VOUCHER_PRINT_STATUS='P'
+   WHERE M_PAY_NO=DOCREFNO ;
+
+END IF;
+
+COMMIT;
+
+END DN_DEPOSIT_SLIP_PRINT; 
+
+/

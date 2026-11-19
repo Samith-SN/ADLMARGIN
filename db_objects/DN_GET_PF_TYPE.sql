@@ -1,0 +1,23 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_PF_TYPE
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_PF_TYPE" 
+(
+ M_PORTFOLIO_CODE        DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE
+ )
+ RETURN VARCHAR2
+ AS
+ M_PF_TYPE      DN_REF_PORTFOLIO.PF_TYPE%TYPE;
+
+ BEGIN
+   SELECT PF_TYPE
+   INTO   M_PF_TYPE
+   FROM   DN_REF_PORTFOLIO
+   WHERE  PORTFOLIO_CODE=M_PORTFOLIO_CODE;
+
+   RETURN  M_PF_TYPE;
+
+ END DN_GET_PF_TYPE;
+
+/

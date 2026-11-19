@@ -1,0 +1,25 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_REF_REACTIVATE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_REF_REACTIVATE" 
+
+   (M_ISSUER_CODE    DN_REF_ISSUER_INST_TYPE.ISSUER_CODE%TYPE
+    )
+AS
+BEGIN
+
+    /* PROCEDURE  -  TO RE-ACTIVATE ISSUER
+       SYSTEM     -  DEALNET
+       CREATED BY -  CHARMINDA S
+       CREATED ON -  22/06/1999 */
+
+UPDATE DN_REF_PRIMARY_ISSUER SET
+       ACTIVE_STATUS='Y'
+WHERE UPPER(ISSUER_CODE)=UPPER(M_ISSUER_CODE);
+COMMIT;
+
+END DN_REF_REACTIVATE;
+
+/

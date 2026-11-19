@@ -1,0 +1,36 @@
+--------------------------------------------------------
+--  DDL for Procedure TXN_OPT_MOD
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."TXN_OPT_MOD" 
+   (m_RATE_CODE       DN_REF_TAX_RATE.RATE_CODE%TYPE,
+    m_RATE_DESC       DN_REF_TAX_RATE.RATE_DESC%TYPE,
+    m_RATE            DN_REF_TAX_RATE.RATE%TYPE,
+    m_NEW_RATE        DN_REF_TAX_RATE.NEW_RATE%TYPE,
+    m_EFECTIVE_DATE   VARCHAR2,
+    M_USER              varchar
+
+    )
+AS
+    NEW_ENT_DATE      DN_REF_TAX_RATE.EFECTIVE_DATE%TYPE;
+BEGIN
+
+
+
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_Tax_Rates');  --added by ashini on 31/10/2005 for sr0509-047
+
+
+    /* PROCEDURE  - TO ADD DN_REF_TXN TABLE
+       SYSTEM     - DEALNET
+       CREATED BY - UPUL
+       CREATED ON - 07/23/1999 */
+UPDATE DN_REF_TAX_RATE SET
+      RATE_DESC=m_RATE_DESC,RATE=m_RATE,NEW_RATE=m_NEW_RATE,EFECTIVE_DATE=TO_DATE(m_EFECTIVE_DATE,'DD/MM/YYYY')
+WHERE  RATE_CODE=m_RATE_CODE AND ACTIVE_STATUS='Y';
+
+COMMIT;
+
+END TXN_OPT_MOD;
+
+/

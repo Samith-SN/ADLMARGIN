@@ -1,0 +1,71 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INVENTORY_MODI_SERI
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INVENTORY_MODI_SERI" 
+(
+--M_INV_MODI_NO IN OUT    DN_TRN_BO_INV_MODIFY_SERIAL_NO.INV_MODI_NO%TYPE,
+M_PORTFOLIO_CODE        DN_TRN_BO_INV_MODIFY_SERIAL_NO.PORTFOLIO_CODE%TYPE,
+M_inst_type             DN_TRN_BO_INV_MODIFY_SERIAL_NO.inst_type%TYPE,---
+M_SECURITY_CODE         DN_TRN_BO_INV_MODIFY_SERIAL_NO.SECURITY_CODE%TYPE,
+M_deal_no               DN_TRN_BO_INV_MODIFY_SERIAL_NO.deal_no%TYPE,----
+M_inv_code              DN_TRN_BO_INV_MODIFY_SERIAL_NO.inv_code%TYPE,-----
+M_face_value            DN_TRN_BO_INV_MODIFY_SERIAL_NO.face_value%TYPE,---
+M_OLD_SERIAL_NO         DN_TRN_BO_INV_MODIFY_SERIAL_NO.OLD_SERIAL_NO%TYPE,
+M_NEW_SERIAL_NO         DN_TRN_BO_INV_MODIFY_SERIAL_NO.NEW_SERIAL_NO%TYPE,
+M_DN_USER               DN_TRN_BO_INV_MODIFY_SERIAL_NO.DN_USER%TYPE,
+M_INV_MODI_NO2 IN OUT   DN_TRN_BO_INV_MODIFY_SERIAL_NO.INV_MODI_NO%TYPE
+)
+AS
+
+   /*  PROCEDURE  - DN_INVENTORY_MODI_SERI SAVING INVENTORY MODIFICATION
+       SYSTEM     - DEALNET
+       CREATED BY - SUKATHISVARAN
+       CREATED ON - 31/AUGUEST/1999  */
+
+M_INV_MODI_NO     DN_TRN_BO_INV_MODIFY_SERIAL_NO.INV_MODI_NO%TYPE;
+BEGIN
+
+DN_VALIDATE_SAVE_RIGHTS(M_DN_USER,'WD_Modification'); --added by ashini on 31/10/2005 for sr0509-047
+
+
+--RAISE_APPLICATION_ERROR(-20201,M_PORTFOLIO_CODE||'|'||M_inst_type||'|'||M_SECURITY_CODE||'|'||M_deal_no||'|'||M_inv_code||'|'||M_face_value||'|'||M_OLD_SERIAL_NO||'|'||M_NEW_SERIAL_NO||'|'||M_DN_USER);
+
+
+SELECT  'IS'||TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'
+        ||LPAD(TO_CHAR(DN_SEQ_INV_MOD_SERNO.NEXTVAL),3,'0')
+        INTO    M_INV_MODI_NO
+        FROM    DUAL;
+
+
+M_INV_MODI_NO2:= M_INV_MODI_NO;
+
+INSERT INTO   DN_TRN_BO_INV_MODIFY_SERIAL_NO
+              (  INV_MODI_NO , PORTFOLIO_CODE , inst_type , SECURITY_CODE , deal_no,inv_code ,
+                face_value , OLD_SERIAL_NO , NEW_SERIAL_NO , DN_USER)
+       VALUES (M_INV_MODI_NO,M_PORTFOLIO_CODE,M_inst_type,M_SECURITY_CODE,M_deal_no,M_inv_code,
+               M_face_value,M_OLD_SERIAL_NO,M_NEW_SERIAL_NO,M_DN_USER);
+
+
+DN_BO_INV_MOD_SERIAL_NO(M_INV_MODI_NO);
+
+INSERT INTO DN_TIME_LOG_SETTLE
+          (DOC_REF_NO,
+           REL_DEAL_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            ( M_INV_MODI_NO2,
+              M_deal_no,
+              M_DN_USER,
+              SYSDATE,
+              'INVENTORY MODIFICATION'
+           );
+
+COMMIT;
+
+END DN_INVENTORY_MODI_SERI;
+
+/

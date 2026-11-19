@@ -1,0 +1,296 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_TRN_REPO_ONCALL_ADJ_TEMP
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_TRN_REPO_ONCALL_ADJ_TEMP" 
+(
+ M_PROCESS_DATE    DN_SYS_PARAMETER.LAST_DAILY%TYPE
+)
+   IS
+
+    -- Procedue     : Adjust On-Call Deals Carry Forward Values (Day End Routine)
+    -- System       : Dealnet system
+    -- Created by   : TDS / SM
+    -- Created on   : 13/10/1999
+
+
+   CURSOR ONCALL_DEALS_RF IS
+   SELECT
+      B.DEAL_NO,
+      B.EFF_VALDATE,
+      B.LEG1_VALUE,
+      B.YIELD,
+      B.INT_RATE_BASE_CODE,
+      B.MATURITY_DATE
+   FROM
+      DN_TRN_REPO_FRESH B
+   WHERE
+      B.ON_CALL_DEAL='Y'
+      AND
+      B.APP_STATUS='CONF'
+      AND
+      --TO_DATE(TO_CHAR(B.MATURITY_DATE,'DD-MM-YYYY'),'DD-MM-YYYY')<=M_PROCESS_DATE
+      B.MATURITY_DATE<=M_PROCESS_DATE
+
+      AND
+      B.DEAL_NO NOT IN
+          (SELECT C.PRIOR_DEAL_NO
+           FROM DN_TRN_REPO_ROLLOVER C
+           WHERE B.DEAL_NO=C.PRIOR_DEAL_NO
+           AND
+           C.APP_STATUS<>'CANCEL')
+      AND
+      B.DEAL_NO NOT IN
+          (SELECT D.PRIOR_DEAL_NO
+           FROM DN_TRN_REPO_SETTLEMENT D
+           WHERE B.DEAL_NO=D.PRIOR_DEAL_NO
+           AND
+           D.APP_STATUS<>'CANCEL');
+
+
+   CURSOR ONCALL_DEALS_RR IS
+   SELECT
+      B.DEAL_NO,
+      B.EFF_VALDATE,
+      B.LEG1_VALUE,
+      B.YEILD,
+      B.INT_RATE_BASE_CODE,
+      B.MATURITY_DATE
+   FROM
+      DN_TRN_REPO_ROLLOVER B
+   WHERE
+      B.ON_CALL_DEAL='Y'
+      AND
+      B.APP_STATUS='CONF'
+      AND
+      --TO_DATE(TO_CHAR(B.MATURITY_DATE,'DD-MM-YYYY'),'DD-MM-YYYY')<=M_PROCESS_DATE
+      B.MATURITY_DATE<=M_PROCESS_DATE
+
+      AND
+      B.DEAL_NO NOT IN
+          (SELECT C.PRIOR_DEAL_NO
+           FROM DN_TRN_REPO_ROLLOVER C
+           WHERE B.DEAL_NO=C.PRIOR_DEAL_NO
+           AND
+           C.APP_STATUS<>'CANCEL')
+      AND
+      B.DEAL_NO NOT IN
+          (SELECT D.PRIOR_DEAL_NO
+           FROM DN_TRN_REPO_SETTLEMENT D
+           WHERE B.DEAL_NO=D.PRIOR_DEAL_NO
+           AND
+           D.APP_STATUS<>'CANCEL');
+
+
+
+
+    M_TENOR                         DN_TRN_REPO_FRESH.TENOR%TYPE;
+    M_MATURITY_DATE                 DN_TRN_REPO_FRESH.MATURITY_DATE%TYPE;
+    M_EFF_VALDATE                   DN_TRN_REPO_FRESH.EFF_VALDATE%TYPE;
+    M_LEG1_VALUE                    DN_TRN_REPO_FRESH.LEG1_VALUE%TYPE;
+    M_YIELD                         DN_TRN_REPO_FRESH.YIELD%TYPE;
+    M_INT_RATE_BASE_CODE            DN_TRN_REPO_FRESH.INT_RATE_BASE_CODE%TYPE;
+    M_LEG2_VALUE                    DN_TRN_REPO_FRESH.LEG2_VALUE%TYPE;
+    M_INT_AMOUNT                    DN_TRN_REPO_FRESH.INT_AMOUNT%TYPE;
+    M_DEAL_NO                       DN_TRN_REPO_FRESH.DEAL_NO%TYPE;
+    M_NEXT_HOLIDAY                  DATE;
+    M_CURR_DATE                     DATE;
+    M_OLD_MATURITY_DATE             DN_TRN_REPO_FRESH.MATURITY_DATE%TYPE;
+
+
+BEGIN
+
+    M_CURR_DATE:=M_PROCESS_DATE;
+
+   SELECT
+   MIN(HOLIDAY)
+   INTO M_NEXT_HOLIDAY
+   FROM
+    DN_REF_HOLIDAY
+    WHERE
+    HOLIDAY>M_CURR_DATE;
+
+   WHILE M_NEXT_HOLIDAY-M_CURR_DATE=1 LOOP
+
+      SELECT
+         M_NEXT_HOLIDAY
+         INTO M_CURR_DATE
+      FROM DUAL;
+
+      SELECT
+         MIN(HOLIDAY)
+         INTO M_NEXT_HOLIDAY
+      FROM
+         DN_REF_HOLIDAY
+      WHERE
+         HOLIDAY>M_CURR_DATE;
+
+   END LOOP;
+   SELECT
+   M_CURR_DATE+1
+   INTO M_MATURITY_DATE
+   FROM DUAL;
+
+
+       OPEN ONCALL_DEALS_RF;
+
+        LOOP
+
+           FETCH  ONCALL_DEALS_RF INTO
+
+           M_DEAL_NO,M_EFF_VALDATE,M_LEG1_VALUE,M_YIELD,M_INT_RATE_BASE_CODE,M_OLD_MATURITY_DATE;
+
+           EXIT WHEN ONCALL_DEALS_RF%NOTFOUND;
+
+           M_TENOR:=M_MATURITY_DATE-M_EFF_VALDATE;
+           M_LEG2_VALUE:=DN_FIN_LEG2_F_LEG1(M_LEG1_VALUE,M_YIELD,M_TENOR,M_INT_RATE_BASE_CODE,M_EFF_VALDATE);
+           M_INT_AMOUNT:=M_LEG2_VALUE-M_LEG1_VALUE;
+
+           UPDATE DN_TRN_REPO_FRESH
+           SET
+              MATURITY_DATE=M_MATURITY_DATE,
+              TENOR=M_TENOR,
+              LEG2_VALUE=M_LEG2_VALUE,
+              INT_AMOUNT=M_INT_AMOUNT
+           WHERE
+              DEAL_NO=M_DEAL_NO;
+
+
+--UPDATE ACCOUNTING TABLES FOR ON-CALL DEALS
+
+           UPDATE DN_ACC_LICENCEE_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+                --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+                TRNDATE=M_OLD_MATURITY_DATE;
+
+
+           UPDATE DN_ACC_PORTF_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+               --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+               TRNDATE=M_OLD_MATURITY_DATE;
+           UPDATE DN_ACC_COUNTP_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+               --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+                TRNDATE=M_OLD_MATURITY_DATE;
+
+
+          END LOOP;
+
+      CLOSE ONCALL_DEALS_RF;
+
+
+     OPEN ONCALL_DEALS_RR;
+
+        LOOP
+
+           FETCH  ONCALL_DEALS_RR INTO
+
+           M_DEAL_NO,M_EFF_VALDATE,M_LEG1_VALUE,M_YIELD,M_INT_RATE_BASE_CODE,M_OLD_MATURITY_DATE;
+
+           EXIT WHEN ONCALL_DEALS_RR%NOTFOUND;
+
+           M_TENOR:=M_MATURITY_DATE-M_EFF_VALDATE;
+           M_LEG2_VALUE:=DN_FIN_LEG2_F_LEG1(M_LEG1_VALUE,M_YIELD,M_TENOR,M_INT_RATE_BASE_CODE,M_EFF_VALDATE);
+           M_INT_AMOUNT:=M_LEG2_VALUE-M_LEG1_VALUE;
+
+           UPDATE DN_TRN_REPO_ROLLOVER
+           SET
+              MATURITY_DATE=M_MATURITY_DATE,
+              TENOR=M_TENOR,
+              LEG2_VALUE=M_LEG2_VALUE,
+              INT_AMOUNT=M_INT_AMOUNT
+           WHERE
+              DEAL_NO=M_DEAL_NO;
+
+
+--UPDATE ACCOUNTING TABLES FOR ON-CALL DEALS
+
+           UPDATE DN_ACC_LICENCEE_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+               --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+              TRNDATE=M_OLD_MATURITY_DATE;
+
+
+           UPDATE DN_ACC_PORTF_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+               --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+               TRNDATE=M_OLD_MATURITY_DATE;
+
+           UPDATE DN_ACC_COUNTP_GEN_ACCOUNT
+           SET TRNDATE=M_MATURITY_DATE,
+               TRNAMOUNT=M_LEG2_VALUE
+           WHERE
+               DOCREFNO=M_DEAL_NO AND
+               --TO_DATE(TO_CHAR(TRNDATE,'DD-MON-YYYY'),'DD-MON-YYYY')=M_OLD_MATURITY_DATE;
+               TRNDATE=M_OLD_MATURITY_DATE;
+
+
+        END LOOP;
+
+      CLOSE ONCALL_DEALS_RR;
+
+--CHANGING THE ON-CALL STATUS TO 'S' TO LIMIT NUMBER OF DEALS ON WHICH ON-CALL PROCEDURE IS
+--TO BE ACTIVATED IN FUTURE
+--ADDED ON 25-10-1999 BY TDS / SM
+
+      UPDATE DN_TRN_REPO_FRESH B SET ON_CALL_DEAL='S'
+      WHERE
+      B.ON_CALL_DEAL='Y'
+            AND
+            B.APP_STATUS='CONF'
+            AND
+            (B.DEAL_NO IN
+                (SELECT C.PRIOR_DEAL_NO
+                 FROM DN_TRN_REPO_ROLLOVER C
+                 WHERE B.DEAL_NO=C.PRIOR_DEAL_NO
+                 AND
+                 C.APP_STATUS='CONF')
+            OR
+            B.DEAL_NO IN
+                (SELECT D.PRIOR_DEAL_NO
+                 FROM DN_TRN_REPO_SETTLEMENT D
+                 WHERE B.DEAL_NO=D.PRIOR_DEAL_NO
+                 AND
+                 D.APP_STATUS='CONF'));
+
+
+  UPDATE DN_TRN_REPO_ROLLOVER B SET ON_CALL_DEAL='S'
+      WHERE
+      B.ON_CALL_DEAL='Y'
+            AND
+            B.APP_STATUS='CONF'
+            AND
+            (B.DEAL_NO IN
+                (SELECT C.PRIOR_DEAL_NO
+                 FROM DN_TRN_REPO_ROLLOVER C
+                 WHERE B.DEAL_NO=C.PRIOR_DEAL_NO
+                 AND
+                 C.APP_STATUS='CONF')
+            OR
+            B.DEAL_NO IN
+                (SELECT D.PRIOR_DEAL_NO
+                 FROM DN_TRN_REPO_SETTLEMENT D
+                 WHERE B.DEAL_NO=D.PRIOR_DEAL_NO
+                 AND
+                 D.APP_STATUS='CONF'));
+
+
+END DN_TRN_REPO_ONCALL_ADJ_TEMP;
+
+/

@@ -1,0 +1,294 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_CLIENT_REJECT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_CLIENT_REJECT" 
+   (
+   M_PORTFOLIO_CODE     DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE,
+   M_ACTIVE_STATUS      DN_REF_PORTFOLIO.ACTIVE_STATUS%TYPE,
+   M_USER               DN_DOC_STATUS_LOG.DN_USER%TYPE
+   )
+AS
+
+/*
+CURSOR REF_PORTFOLIO IS
+    SELECT A.PORTFOLIO_CODE, A.PF_TYPE, A.PF_NAME, A.ADD_IDENTIFICATION,
+                A.ADD_LOCATION, A.ADD_STREET, A.ADD_CITY, A.ADD_COUNTRY,
+                A.POSTAL_CODE, A.DATE_INC_BIRTH, A.BUSI_REG_NIC,
+                A.CATEGORY_ENTITY, A.NATURE_OCCUPATION, A.SECT_CODE,
+                A.MBFSL_SECT_CODE, A.CREATED_DATE, A.LAST_MODIFIED,
+                A.NEST_REVIEW, A.TOT_EXP_LIMIT, A.PERC_TOT_EXP,
+                A.APPLY_STATUS, A.CP_PORTFOLIO_CODE, A.OWNED_BY_MBFSL,
+                A.ACTIVE_STATUS, A.EXP_LIMIT_APPLY_METHOD, A.BRANCH, A.RATE,
+                A.RATE_TYPE, A.LIMIT, A.USER_TYPE, A.MARGIN_CALL_STATUS,
+                A.TEMP_MARGIN_CALL_STATUS, A.MANAGEMENT_FEE,
+                A.PROFIT_SHARING, A.BASE_RATE, A.PA_STATUS, A.CDS_ACC_NO,
+                A.SWIFT_STATUS, A.ACC_NO, A.SWIFT_CLIENT, A.BIC_CODE,
+                A.PLEDG_ACC_NO, A.CON_MARGIN_TYPE
+           FROM DN_REF_PORTFOLIO_RJTMP A
+          WHERE UPPER (PORTFOLIO_CODE) = UPPER (M_PORTFOLIO_CODE);*/
+
+M_NUMBER VARCHAR(100);
+M_TMP_ACTIVE_STATUS  DN_REF_PORT_ACTSTATE_TEMP.ACTIVE_STATUS%TYPE;
+
+BEGIN
+
+/* comm by waruna 2012-03-21
+IF   M_ACTIVE_STATUS = 'MODIFIED'  THEN 
+                   
+FOR I IN REF_PORTFOLIO
+LOOP
+                 
+             UPDATE DN_REF_PORTFOLIO SET 
+                PF_TYPE=I.PF_TYPE,
+                PF_NAME=I.PF_NAME, 
+                ADD_IDENTIFICATION=I.ADD_IDENTIFICATION,
+                ADD_LOCATION=I.ADD_LOCATION, 
+                ADD_STREET=I.ADD_STREET, 
+                ADD_CITY=I.ADD_CITY, 
+                ADD_COUNTRY=I.ADD_COUNTRY,
+                POSTAL_CODE=I.POSTAL_CODE, 
+                DATE_INC_BIRTH=I.DATE_INC_BIRTH,
+                BUSI_REG_NIC=I.BUSI_REG_NIC,
+                CATEGORY_ENTITY=I.CATEGORY_ENTITY, 
+                NATURE_OCCUPATION=I.NATURE_OCCUPATION,
+                SECT_CODE=I.SECT_CODE,
+                MBFSL_SECT_CODE=I.MBFSL_SECT_CODE, 
+                CREATED_DATE=I.CREATED_DATE,
+                LAST_MODIFIED=I.LAST_MODIFIED,
+                NEST_REVIEW=I.NEST_REVIEW, 
+                TOT_EXP_LIMIT=I.TOT_EXP_LIMIT, 
+                PERC_TOT_EXP=I.PERC_TOT_EXP,
+                APPLY_STATUS=I.APPLY_STATUS, 
+                CP_PORTFOLIO_CODE=I.CP_PORTFOLIO_CODE, 
+                OWNED_BY_MBFSL=I.OWNED_BY_MBFSL,
+                ACTIVE_STATUS=I.ACTIVE_STATUS, 
+                EXP_LIMIT_APPLY_METHOD=I.EXP_LIMIT_APPLY_METHOD,
+                BRANCH=I.BRANCH, 
+                RATE=I.RATE,
+                RATE_TYPE=I.RATE_TYPE, 
+                LIMIT=I.LIMIT, 
+                USER_TYPE=I.USER_TYPE, 
+                MARGIN_CALL_STATUS=I.MARGIN_CALL_STATUS,
+                TEMP_MARGIN_CALL_STATUS=I.TEMP_MARGIN_CALL_STATUS, 
+                MANAGEMENT_FEE=I.MANAGEMENT_FEE,
+                PROFIT_SHARING=I.PROFIT_SHARING, 
+                BASE_RATE=I.BASE_RATE, 
+                PA_STATUS=I.PA_STATUS, 
+                CDS_ACC_NO=I.CDS_ACC_NO,
+                SWIFT_STATUS=I.SWIFT_STATUS, 
+                ACC_NO=I.ACC_NO, 
+                SWIFT_CLIENT=I.SWIFT_CLIENT, 
+                BIC_CODE=I.BIC_CODE,
+                PLEDG_ACC_NO=I.PLEDG_ACC_NO, 
+                CON_MARGIN_TYPE=I.CON_MARGIN_TYPE
+          WHERE UPPER (PORTFOLIO_CODE) = UPPER (M_PORTFOLIO_CODE);
+                                
+                IF  I.ACTIVE_STATUS = 'M'  THEN 
+                    UPDATE DN_REF_PORTFOLIO SET 
+                    ACTIVE_STATUS='Y' 
+                    WHERE UPPER (PORTFOLIO_CODE) = UPPER (M_PORTFOLIO_CODE);
+                END IF;
+
+    END LOOP;   
+
+
+----------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_DIRECTOR
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_DIRECTOR
+                     (PORTFOLIO_CODE, DIRECTOR_NAME)
+            SELECT A.PORTFOLIO_CODE, A.DIRECTOR_NAME
+              FROM DN_REF_PORTF_DIRECTOR_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+----------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_AUTHO_SIGN
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_AUTHO_SIGN
+                     (PORTFOLIO_CODE, AUTHO_NAME, SEQ_NO)
+            SELECT A.PORTFOLIO_CODE, A.AUTHO_NAME, A.SEQ_NO
+              FROM DN_REF_PORTF_AUTHO_SIGN_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+
+---------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_CONT_TELNO
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_CONT_TELNO
+                     (PORTFOLIO_CODE, TEL_NO, SEQ_NO)
+            SELECT A.PORTFOLIO_CODE, A.TEL_NO, A.SEQ_NO
+              FROM DN_REF_PORTF_CONT_TELNO_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+
+---------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_CONT_FAXNO
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_CONT_FAXNO
+                     (PORTFOLIO_CODE, FAX_NO, SEQ_NO)
+            SELECT A.PORTFOLIO_CODE, A.FAX_NO, A.SEQ_NO
+              FROM DN_REF_PORTF_CONT_FAXNO_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+             
+---------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_CONT_EMAIL
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_CONT_EMAIL
+                     (PORTFOLIO_CODE, EMAIL, SEQ_NO)
+            SELECT A.PORTFOLIO_CODE, A.EMAIL, A.SEQ_NO
+              FROM DN_REF_PORTF_CONT_EMAIL_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+             
+---------------------------------------------------------------------------
+         DELETE FROM DN_REF_PORTF_SETTLEMENT
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTF_SETTLEMENT
+                     (PORTFOLIO_CODE, BRANCH_CODE, ACC_NO, ACTIVE_STATUS,SETT_MODE)
+            SELECT A.PORTFOLIO_CODE, A.BRANCH_CODE, A.ACC_NO,
+                   A.ACTIVE_STATUS,SETT_MODE
+              FROM DN_REF_PORTF_SETTLEMENT_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+      
+---------------------------------------------------------------------------  
+      
+    DELETE FROM DN_REF_PORT_ADV
+               WHERE PORT_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORT_ADV
+                     (PORT_CODE, ADV_CODE, BROKER_CODE)
+            SELECT A.PORT_CODE, A.ADV_CODE, A.BROKER_CODE
+              FROM DN_REF_PORT_ADV_RJTMP A
+             WHERE PORT_CODE = M_PORTFOLIO_CODE; 
+      
+---------------------------------------------------------------------------
+
+        DELETE  DN_REF_PORTFOLIO_INST_RATES 
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+         INSERT INTO DN_REF_PORTFOLIO_INST_RATES
+                     (PORTFOLIO_CODE, INSTRUMENT_CODE, INSTRUMENT_RATE)
+            SELECT A.PORTFOLIO_CODE, A.INSTRUMENT_CODE, A.INSTRUMENT_RATE
+              FROM  DN_REF_PORTFOLIO_INST_RATRTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE; 
+------------------------Added 30-06-2011------------------------------------
+         DELETE FROM DN_REF_PORTF_CONT_EMAILCC
+               WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+            INSERT INTO DN_REF_PORTF_CONT_EMAILCC  
+                   (PORTFOLIO_CODE,EMAIL,SEQ_NO)
+            SELECT A.PORTFOLIO_CODE, A.EMAIL, A.SEQ_NO
+              FROM  DN_REF_PORTF_CONT_EMLC_RJTMP A
+             WHERE PORTFOLIO_CODE = M_PORTFOLIO_CODE;             
+             
+---------------------------------------------------------------------------------
+
+ELSIF   M_ACTIVE_STATUS = 'ENTERD' OR M_ACTIVE_STATUS = 'ACTIVE' 
+        OR M_ACTIVE_STATUS = 'DEACTIVE' OR M_ACTIVE_STATUS = 'TERMINATE' THEN
+        
+        
+            SELECT ACTIVE_STATUS INTO  M_TMP_ACTIVE_STATUS
+            FROM   DN_REF_PORT_ACTSTATE_TEMP
+            WHERE UPPER (PORTFOLIO_CODE) = UPPER (M_PORTFOLIO_CODE); 
+                   
+                       
+            UPDATE DN_REF_PORTFOLIO 
+            SET ACTIVE_STATUS = M_TMP_ACTIVE_STATUS
+            WHERE UPPER (PORTFOLIO_CODE) = UPPER (M_PORTFOLIO_CODE); 
+            
+            INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+            VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+
+                 
+END IF;
+*/
+
+--add by waruna 2012-03-21
+
+  IF   M_ACTIVE_STATUS = 'MODIFIED'  THEN 
+  
+  INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+  VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION REJ',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+            
+  ELSIF   M_ACTIVE_STATUS = 'ENTERD' THEN
+  
+  INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+  VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION REJ',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+            
+  ELSIF M_ACTIVE_STATUS = 'ACTIVE' THEN
+  
+  INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+  VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION REJ',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+            
+  ELSIF  M_ACTIVE_STATUS = 'DEACTIVE' THEN
+  
+  INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+  VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION REJ',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+            
+  ELSIF M_ACTIVE_STATUS = 'TERMINATE' THEN 
+  
+  INSERT INTO DN_DOC_STATUS_LOG( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+  VALUES(UPPER(M_PORTFOLIO_CODE),'CLIENT CONFIRMATION REJ',M_TMP_ACTIVE_STATUS,M_USER,SYSDATE,'CLIENT CONFIRMATION-'||M_ACTIVE_STATUS);
+            
+  END IF;
+  
+  
+  
+           DELETE DN_REF_PORTFOLIO_TEMP2 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           DELETE DN_REF_PORTF_DIRECTOR_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE;  
+          
+        
+           DELETE DN_REF_PORTF_AUTHO_SIGN_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+           
+       
+           DELETE DN_REF_PORTF_CONT_PERSON_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+                                  
+      
+           DELETE DN_REF_PORTF_CONT_TELNO_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+ 
+           DELETE DN_REF_PORTF_CONT_FAXNO_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+           
+     
+           DELETE DN_REF_PORTF_CONT_EMAIL_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+       
+           DELETE DN_REF_PORTF_CONT_EMAILCC_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+           
+           -------------------------------------------------
+       
+           DELETE DN_REF_PORTF_SETTLEMENT_TEMP 
+           WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE; 
+
+COMMIT;
+
+
+
+END; 
+
+/

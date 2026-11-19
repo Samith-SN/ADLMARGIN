@@ -1,0 +1,41 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_CLIENT_DEPOSIT
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_CLIENT_DEPOSIT" 
+     ( M_PORTFOLIO_CODE    DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE,
+       M_START_DATE        VARCHAR,
+       M_END_DATE          VARCHAR
+     )
+
+    -- Function     : This returns TOTAL  RECEIPT  
+    -- System       : DEALNET System
+    -- Created by   :
+    -- Created on   :K.M.W.S.JAYANATH
+  RETURN  REAL
+
+
+
+   IS
+ TOTAL NUMBER:=0;
+
+BEGIN
+
+
+SELECT SUM(A.TRNAMOUNT) INTO TOTAL  FROM DN_TRN_BO_CAP_DEPOSIT A
+WHERE PORTFOLIO_CODE=M_PORTFOLIO_CODE
+/*AND  A.TRNDATE<=TO_DATE(M_END_DATE,'DD/MM/YYYY')  
+AND A.TRNDATE>=TO_DATE(M_START_DATE,'DD/MM/YYYY')*/
+
+AND  A.EFF_VAL_DATE<=TO_DATE(M_END_DATE,'DD/MM/YYYY')  
+AND  A.EFF_VAL_DATE>=TO_DATE(M_START_DATE,'DD/MM/YYYY')
+AND  TRANSACTION_TYPE='D'
+AND  APP_STATUS IN ('APPR1','CONF','SIG1','SIG2','PRINT') ---add by waruna 2012-05-04
+; 
+
+
+RETURN TOTAL;
+
+END ; 
+
+/

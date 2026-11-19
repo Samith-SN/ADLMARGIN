@@ -1,0 +1,94 @@
+--------------------------------------------------------
+--  DDL for Function DN_FIN_PI_COUPON_INT_AMT_V1
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_FIN_PI_COUPON_INT_AMT_V1" 
+(M_EFF_VALDATE       DN_TRN_REPO_PERIOD_INT.EFF_VALDATE%TYPE,
+ M_INT_PAY_RATE      DN_TRN_REPO_PERIOD_INT.INT_PAY_RATE%TYPE,
+ M_INT_PAY_FREQ      DN_TRN_REPO_PERIOD_INT.INT_PAY_FREQ%TYPE
+ )
+     RETURN  REAL
+
+    IS
+
+    -- Proceudre    : Periodic interest amount calculation
+    -- System       : DEALNET System
+    -- Created by   : V.Thilakesan.
+    -- Created on   : 19/04/2000
+
+   M_INT_AMT                    NUMBER;
+   M_NO_DAYS_P_ANN              NUMBER;
+   M_BOND_FACE_VALUE            NUMBER;
+   M_NEXT_COUPON_DATE           DN_REF_SECURITY.MATURITY_DATE%TYPE;
+   M_LAST_COUPON_DATE           DN_REF_SECURITY.MATURITY_DATE%TYPE;
+
+BEGIN
+
+    M_BOND_FACE_VALUE:=100.00;
+
+    --M_ISSUE_DATE:=M_EFF_VALDATE;
+    M_NO_DAYS_P_ANN:=12;
+
+
+/*
+  SELECT
+     COUNT(SEQNO) INTO M_NO_DAYS_P_ANN
+  FROM
+     DN_TRN_REPO_PERIOD_INT_DATES
+  WHERE
+     --SEQNO=M_SEQNO
+     --AND
+     PAY_DATE>=M_ISSUE_DATE
+     AND
+     PAY_DATE<=ADD_MONTHS(M_ISSUE_DATE,12);
+*/
+ -- Next coupon date
+
+  SELECT
+     M_EFF_VALDATE INTO  M_NEXT_COUPON_DATE
+  FROM
+     DUAL;
+
+-- Last coupon date
+  SELECT
+     ADD_MONTHS(M_EFF_VALDATE,-1) INTO  M_LAST_COUPON_DATE
+  FROM
+     DUAL;
+/*
+  SELECT
+     MAX(PAY_DATE) INTO  M_LAST_COUPON_DATE
+  FROM
+     DN_TRN_REPO_PERIOD_INT_DATES
+  WHERE
+     --SEQNO=M_SEQNO
+     --AND
+     PAY_DATE<M_EFF_VALDATE;
+*/
+/*
+  IF M_LAST_COUPON_DATE IS NULL THEN
+
+     ---Which is higher
+
+     M_LAST_COUPON_DATE:=M_ISSUE_DATE;
+
+  END IF;
+*/
+  -- Interest accural
+
+ --   IF M_EFF_VALDATE>=M_ISSUE_DATE THEN
+
+ --      M_NO_DAYS_INT_ACCRUAL:=M_EFF_VALDATE-M_LAST_COUPON_DATE;
+
+       M_INT_AMT:=((M_BOND_FACE_VALUE*M_INT_PAY_RATE)/M_NO_DAYS_P_ANN)/(M_NEXT_COUPON_DATE-M_LAST_COUPON_DATE)*M_INT_PAY_FREQ;
+
+--    ELSE
+
+--      M_INT_ADJ:=0;
+
+--    END IF;
+
+    RETURN ROUND(M_INT_AMT,4);
+
+END DN_FIN_PI_COUPON_INT_AMT_V1;
+
+/

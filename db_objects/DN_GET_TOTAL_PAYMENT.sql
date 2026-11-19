@@ -1,0 +1,51 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_TOTAL_PAYMENT
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_TOTAL_PAYMENT" 
+(
+ PORT           DN_TRN_OUTP_SALE.BUY_PORTFOLIO_CODE%TYPE,
+ CP_CODE        DN_TRN_OUTP_SALE.SELL_PORTFOLIO_CODE%TYPE,
+ EFFDATE        varchar2
+)
+ RETURN number
+ AS
+ M_TOTAL_PAYMENT       DN_TRN_OUTP_SALE.SETTLE_VALUE%TYPE;
+
+
+ BEGIN
+                         
+                         BEGIN
+                         
+                          SELECT SUM(SETTLE_VALUE) INTO M_TOTAL_PAYMENT 
+						  FROM DN_TRN_OUTP_SALE X, 
+							     DN_TRN_OUTP_SALE_SETTLE_EQUITY Z, 
+						         DN_REF_PORTFOLIO W,  
+							     DN_REF_PORTFOLIO V  
+						   WHERE Z.DEAL_NO= X.DEAL_NO AND 
+						       X.APP_STATUS<>'CANCEL' AND X.BUY_PORTFOLIO_CODE= W.PORTFOLIO_CODE AND 
+						       X.SELL_PORTFOLIO_CODE = V.PORTFOLIO_CODE AND 
+						       X.BUY_PORTFOLIO_CODE=PORT AND 
+						       X.SELL_PORTFOLIO_CODE=CP_CODE AND
+						    	DN_GET_INSTRUMENT_CAT(INST_TYPE)='EQUITY' AND  
+						      (W.PF_TYPE = 'P' OR W.OWNED_BY_MBFSL='Y') AND V.PF_TYPE='C' AND 
+						      TO_DATE(TO_CHAR(BUY_SETLE_DATE,'DD-MM-YYYY'),'DD-MM-YYYY')>=TO_DATE(EFFDATE,'DD-MM-YYYY') AND  
+						      TO_DATE(TO_CHAR(BUY_SETLE_DATE,'DD-MM-YYYY'),'DD-MM-YYYY')<=TO_DATE(EFFDATE,'DD-MM-YYYY') 
+						 GROUP BY X.BUY_PORTFOLIO_CODE,SELL_PORTFOLIO_CODE,V.PF_NAME,BUY_SETLE_DATE ;
+         RETURN  NVL(M_TOTAL_PAYMENT,0);
+         
+          EXCEPTION
+          WHEN NO_DATA_FOUND THEN
+
+          RETURN  0;
+          END;
+ 
+ 
+  EXCEPTION
+  WHEN OTHERS THEN
+  
+   RAISE_APPLICATION_ERROR(-20201,'DATA ERROR PORT='||PORT||'**CP_CODE='||CP_CODE||'***EFFDATE='||EFFDATE);
+
+END DN_GET_TOTAL_PAYMENT;
+
+/

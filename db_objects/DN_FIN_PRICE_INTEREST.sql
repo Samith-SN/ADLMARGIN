@@ -1,0 +1,47 @@
+--------------------------------------------------------
+--  DDL for Function DN_FIN_PRICE_INTEREST
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_FIN_PRICE_INTEREST" 
+  (
+    M_SECURITY_CODE       DN_INV_OUTPS_DEAL_SERIAL_NO.SECURITY_CODE%TYPE,
+    M_REQ_YIELD           DN_INV_OUTPS_DEAL_SERIAL_NO.DEAL_YIELD%TYPE,
+    M_EFF_VALDATE         DN_INV_OUTPS_DEAL_SERIAL_NO.EFF_VALDATE%TYPE,
+    M_FACE_VAL            DN_INV_OUTPS_DEAL_SERIAL_NO.FACE_VAL%TYPE,
+    M_CARR_VAL            DN_INV_OUTPS_DEAL_SERIAL_NO.CARR_VAL%TYPE,
+    M_INT_RATE_BASE_CODE  DN_TRN_OUTP_SALE.INT_RATE_BASE_CODE%TYPE
+
+   )
+
+   RETURN  REAL
+
+   IS
+
+    -- Function     : This returns price interest
+    -- System       : DealNet System
+    -- Created by   : D.P. Pubudu Thushara
+    -- Created on   : 10/08/1999
+    -- Modified on  : 02/09/1999
+
+  M_RETVAL                     NUMBER;
+
+
+BEGIN
+
+   SELECT
+      ((M_FACE_VAL/100)*
+      DN_FIN_PRICE_CLEAN_YIELD(M_SECURITY_CODE,M_REQ_YIELD,M_EFF_VALDATE,M_INT_RATE_BASE_CODE))-
+      M_CARR_VAL
+      INTO M_RETVAL
+   FROM
+      DN_REF_SECURITY
+   WHERE
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      MATURITY_DATE>=M_EFF_VALDATE;  --SHOULD BE MATURITY_DATE>=M_EFF_VALDATE ??? CHANGED BY SM 22/11/99
+
+RETURN ROUND(NVL(M_RETVAL,0),4);
+
+END DN_FIN_PRICE_INTEREST;
+
+/

@@ -1,0 +1,32 @@
+--------------------------------------------------------
+--  DDL for Function DN_ACC_LICE_PORT
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_ACC_LICE_PORT" 
+    (
+      M_PORTFOLIO1        DN_ACC_LICEN_INST_GEN_SUM.PORTFOLIO_CODE%TYPE,
+      M_PORTFOLIO2        DN_ACC_LICEN_INST_GEN_HIS.PORTFOLIO_CODE%TYPE
+    )
+   RETURN  VARCHAR2
+    IS
+
+    -- Function     : TO RETURN PORTFOLIO_CODE
+    -- System       : DEALNET
+    -- Created by   : LATHIKA
+    -- Created on   : 24/01/2000
+
+ M_PORTFOLIO_CODE       DN_ACC_LICEN_INST_GEN_SUM.PORTFOLIO_CODE%TYPE;
+
+  BEGIN
+
+ IF M_PORTFOLIO1 IS NOT NULL THEN
+    M_PORTFOLIO_CODE:= M_PORTFOLIO1;
+ ELSIF M_PORTFOLIO2 IS NOT NULL THEN
+    M_PORTFOLIO_CODE:= M_PORTFOLIO2;
+ END IF;
+
+ RETURN SUBSTR(M_PORTFOLIO_CODE,1,6);
+
+END DN_ACC_LICE_PORT;
+
+/

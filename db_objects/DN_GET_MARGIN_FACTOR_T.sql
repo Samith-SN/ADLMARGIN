@@ -1,0 +1,108 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_MARGIN_FACTOR_T
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_MARGIN_FACTOR_T" 
+(
+  M_PORTFOLIO_CODE IN DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE,
+  M_DATE              VARCHAR2,
+  M_AMOUNT            NUMBER,
+  M_MINUS_DAYS        NUMBER
+ )
+  RETURN NUMBER IS
+
+  M_MARGIN_FACTOR            NUMBER;
+  M_MARGIN_FACTOR_NEW        NUMBER;
+  M_COUNT                    NUMBER;
+  M_HOLIDAY                  DATE;
+  M_TEMP_DATE                DATE :=TO_DATE(M_DATE,'DD-MM-YYYY')-1;
+  M_NONHOLI_COUNT            NUMBER :=1;
+  M_HOLI_COUNT               NUMBER :=0;
+  --M_MINUS_DAYS               NUMBER :=3;
+
+
+BEGIN
+
+dbms_output.put_line('M_PORTFOLIO_CODE'||M_PORTFOLIO_CODE);
+dbms_output.put_line('M_DATE'||M_DATE);
+dbms_output.put_line('M_AMOUNT'||M_AMOUNT);
+
+
+ -- CREATED BY : YOHAN
+ -- CREATED ON : 27-04-2006
+ -- PURPOSE    : RETURN MARGIN FACTOR FOR T-1 AND T-3
+
+dbms_output.put_line('M_NONHOLI_COUNT'||M_NONHOLI_COUNT);
+dbms_output.put_line('M_MINUS_DAYS'||M_MINUS_DAYS);
+
+WHILE (M_NONHOLI_COUNT <= M_MINUS_DAYS)
+LOOP
+    M_HOLI_COUNT :=0;
+    SELECT COUNT(*)
+    INTO M_HOLI_COUNT
+    FROM DN_REF_HOLIDAY
+    WHERE HOLIDAY = M_TEMP_DATE;
+
+dbms_output.put_line('M_HOLI_COUNT'||M_HOLI_COUNT);
+
+    IF M_HOLI_COUNT =0 THEN
+        M_NONHOLI_COUNT := M_NONHOLI_COUNT+1;
+        dbms_output.put_line('M_NONHOLI_COUNT'||M_NONHOLI_COUNT);
+    END IF;
+
+    IF (M_NONHOLI_COUNT <> (M_MINUS_DAYS+1) ) THEN
+        M_TEMP_DATE := M_TEMP_DATE -1;
+        dbms_output.put_line('M_TEMP_DATE'||M_TEMP_DATE);
+    END IF;
+
+END LOOP;
+
+
+ SELECT COUNT(*)
+ INTO   M_COUNT
+ FROM   DN_REP_MARGIN_CALL
+ WHERE  TRN_DATE       = TO_DATE(M_TEMP_DATE,'DD-MM-YYYY') AND
+        PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+ dbms_output.put_line('M_COUNT AAA'||M_COUNT);
+
+ IF M_COUNT>0 THEN
+ dbms_output.put_line('UU AAA');
+ SELECT SUM(FACE_VAL*MARKET_RATE)
+ INTO   M_MARGIN_FACTOR_NEW
+ FROM   DN_REP_MARGIN_CALL
+ WHERE  TRN_DATE       = TO_DATE(M_TEMP_DATE,'DD-MM-YYYY') AND
+        PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+ dbms_output.put_line('M_MARGIN_FACTOR AAA'||M_MARGIN_FACTOR);
+ dbms_output.put_line('M_MARGIN_FACTOR_NEW AAA'||M_MARGIN_FACTOR_NEW);
+
+ IF M_MARGIN_FACTOR_NEW=0 THEN
+ dbms_output.put_line('UU BBB');
+ M_MARGIN_FACTOR:=0;
+ dbms_output.put_line('M_MARGIN_FACTOR BBB'||M_MARGIN_FACTOR);
+
+ ELSE
+ dbms_output.put_line('UU CCC');
+ SELECT DISTINCT ((REPO_LEG2+NET_CASHFLOWS+INT_AMOUNT)/M_MARGIN_FACTOR_NEW)*100
+ INTO   M_MARGIN_FACTOR
+ FROM   DN_REP_MARGIN_CALL
+ WHERE  TRN_DATE       = TO_DATE(M_TEMP_DATE,'DD-MM-YYYY') AND
+        PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+ dbms_output.put_line('M_MARGIN_FACTOR CCC'||M_MARGIN_FACTOR);
+ END IF;
+
+ ELSE
+    dbms_output.put_line('UU DDD');
+    M_MARGIN_FACTOR:=0;
+    dbms_output.put_line('M_MARGIN_FACTOR DDD'||M_MARGIN_FACTOR);
+ END IF;
+ dbms_output.put_line('M_MARGIN_FACTOR DDD'||M_MARGIN_FACTOR);
+ RETURN M_MARGIN_FACTOR;
+ dbms_output.put_line('M_MARGIN_FACTOR EEE'||M_MARGIN_FACTOR);
+
+/*EXCEPTION
+   WHEN OTHERS THEN
+       RAISE_APPLICATION_ERROR(-20001,*/
+END;
+
+/

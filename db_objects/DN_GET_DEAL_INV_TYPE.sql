@@ -1,0 +1,34 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_DEAL_INV_TYPE
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_DEAL_INV_TYPE" 
+(
+  MDEAL_MO             DN_TRN_OUTP_SALE.DEAL_NO%TYPE,
+  M_INVENTORY_TYPE     DN_TRN_OUTP_SALE.INVENTORY_TYPE%TYPE/*,
+  M_PORTFOLIO_CODE     DN_TRN_OUTP_SALE.SELL_PORTFOLIO_CODE%TYPE*/
+
+)
+  Return VARCHAR2 IS
+
+   M_SATATUS  VARCHAR2(7);
+   M_COUNT    NUMBER;
+   M_INST_CAT DN_REF_INSTRUMENT.INST_CAT%TYPE;
+
+BEGIN
+
+    SELECT COUNT(*) INTO  M_COUNT
+    FROM   DN_TRN_OUTP_SALE A
+    WHERE  A.DEAL_NO=MDEAL_MO AND
+           INVENTORY_TYPE = M_INVENTORY_TYPE;
+    IF M_COUNT>0 THEN
+          M_SATATUS := 'YES';
+    ELSE
+      M_SATATUS := 'NO';
+    END IF;
+
+  RETURN M_SATATUS;
+
+END;
+
+/

@@ -1,0 +1,432 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_FIND_EXPOSURE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_FIND_EXPOSURE" 
+(
+ M_DATE         	   VARCHAR2,--LMT_EXC_CURRENT.VIOLATED_DATE%TYPE,
+ EXP_LIST    IN OUT    EXPOSURE_PKG.EXPOSURE_LIST
+
+)
+AS
+
+        --CREATED BY  : NIRMALA FERNANDO.
+        --CREATED ON  : 28-MAR-2001.
+        --SYSTEM      : FCAM DEALNET.
+        --PURPOSE     : TO DISPLAY THE EXPOSURE REPORT.
+
+          M_START         NUMBER;
+          M_END           NUMBER;
+          M_AMOUNT        NUMBER;
+          M_WAVG          NUMBER;
+          M_WDAYS         NUMBER;
+          M_DESC          CHAR(2);
+         /* MM_START        NUMBER;
+          MM_END        NUMBER;
+          MM_AMOUNT_INV        NUMBER;
+          MM_WAVG_INV        NUMBER;
+          MM_WDAYS_INV        NUMBER;
+          MM_DESC_INV          CHAR(2);
+          MM_AMOUNT_RR        NUMBER;
+          MM_WAVG_RR        NUMBER;
+          MM_WDAYS_RR        NUMBER;
+          MM_DESC_RR          CHAR(2);
+          MM_AMOUNT_R        NUMBER;
+          MM_WAVG_R        NUMBER;
+          MM_WDAYS_R        NUMBER;
+          MM_DESC_R          CHAR(2);*/
+
+CURSOR MY_CUR IS
+       SELECT TAB.COL1,TAB.COL2,TAB.COL3,TAB.COL4,TAB.COL5,TAB.COL6
+       FROM
+         (SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.CARR_VAL) "COL3",
+          SUM(A.DEAL_YIELD*100*A.CARR_VAL)/200/*SUM(A.CARR_VAL)*/ "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+          1200 "COL5",
+          'IN' "COL6"
+          FROM DN_INV_OUTPS_DEAL_SEC A,
+              DN_REF_SECURITY B,
+              DN_REF_PORTFOLIO C
+          WHERE A.SECURITY_CODE=B.SECURITY_CODE
+              AND
+                  A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+              AND
+                  B.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')
+              AND
+                  A.TRN_TYPE ='B'
+              AND
+    	          C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	           AND
+	              C.PF_TYPE='P'
+              AND
+                  C.OWNED_BY_MBFSL='Y'
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+     UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.CARR_VAL) "COL3",
+          SUM(DEAL_YIELD*100*A.CARR_VAL)/200/*SUM(A.CARR_VAL)*/ "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+          'IN' "COL6"
+          FROM DN_INV_OUTPS_DEAL_SEC A,
+              DN_REF_SECURITY B,
+              DN_REF_PORTFOLIO C
+          WHERE A.SECURITY_CODE=B.SECURITY_CODE
+              AND
+                  A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+              AND
+                  B.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+              AND
+                  A.TRN_TYPE ='S'
+              AND
+    	          C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	          AND
+	              C.PF_TYPE='P'
+              AND
+                  C.OWNED_BY_MBFSL='Y'
+           GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.CARR_VAL) "COL3",
+          SUM(A.DEAL_YIELD*100*A.CARR_VAL)/SUM(A.CARR_VAL) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+          'IN' "COL6"
+          FROM DN_INV_OUTPS_DEAL_SERIAL_NO A,
+			   DN_REF_SECURITY B,
+                DN_REF_PORTFOLIO C
+		  WHERE A.SECURITY_CODE=B.SECURITY_CODE
+               AND
+					A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+               AND
+                    B.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+               AND
+                   (( A.SERIAL_NO_STATUS='INV')
+               OR
+                    (TO_DATE(TO_CHAR(A.SALE_EFF_VALDATE,'DD-MM-YYYY'),'DD-MM-YYYY')>TO_DATE(M_DATE,'DD/MM/YYYY')) OR (A.SALE_EFF_VALDATE IS NULL))
+              AND
+    	            C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	          AND
+	                C.PF_TYPE='P'
+              AND
+                    C.OWNED_BY_MBFSL='Y'
+           GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                 DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(B.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+  /* ***********************FROM TRANSACTION TABLES  ************************** */
+    UNION ALL
+       SELECT  DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.COST) "COL3",
+          SUM(A.YIELD*100*A.COST)/SUM(A.COST) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+          'IN' "COL6"
+	   FROM
+	      DN_TRN_OUTP_SALE A,
+	      DN_REF_PORTFOLIO B,
+          DN_REF_SECURITY C
+	   WHERE
+             A.SECURITY_CODE=C.SECURITY_CODE
+          AND
+            A.EFF_VALDATE<= TO_DATE(M_DATE,'DD/MM/YYYY')
+          AND A.SECURITY_CODE IN
+    		(
+    		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > TO_DATE(M_DATE,'DD/MM/YYYY')--
+    	   	)
+          AND
+    	      B.PORTFOLIO_CODE=A.BUY_PORTFOLIO_CODE --TO IDENTIFY BUY/SALE
+  	      AND
+	          B.PF_TYPE='P'
+          AND
+              B.OWNED_BY_MBFSL='Y'
+          AND
+              APP_STATUS NOT IN ('CONF','CANCEL')
+       GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+             DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+
+      UNION ALL
+       SELECT  DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          DN_LIMIT_DEDUCT_SUM(SUM(A.COST)) "COL3",
+          SUM(A.YIELD*100*DN_LIMIT_DEDUCT_SUM(A.COST))/DN_LIMIT_DEDUCT_SUM(SUM(A.COST)) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+          'IN' "COL6"
+	   FROM
+	      DN_TRN_OUTP_SALE A,
+	      DN_REF_PORTFOLIO B,
+          DN_REF_SECURITY C
+	   WHERE
+            A.SECURITY_CODE=C.SECURITY_CODE
+          AND
+            A.EFF_VALDATE<= TO_DATE(M_DATE,'DD/MM/YYYY')
+          AND A.SECURITY_CODE IN
+    		(
+    		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > TO_DATE(M_DATE,'DD/MM/YYYY')--
+    	   	)
+          AND
+    	      B.PORTFOLIO_CODE=A.SELL_PORTFOLIO_CODE --TO IDENTIFY BUY/SALE
+  	      AND
+	          B.PF_TYPE='P'
+          AND
+              B.OWNED_BY_MBFSL='Y'
+          AND
+              APP_STATUS NOT IN ('CONF','CANCEL')
+      GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+             DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(C.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE+A.INT_ACCR)) "COL3",
+          SUM(A.YIELD*100*DN_LIMIT_DEDUCT_SUM(A.LEG1_VALUE+A.INT_ACCR))/DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE+A.INT_ACCR)) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+          1200 "COL5",
+           'RE' "COL6"
+
+          FROM DN_TRN_REPO_FRESH A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.BORR_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.LEG1_VALUE+A.INT_ACCR) "COL3",
+          SUM(A.YIELD*100*(A.LEG1_VALUE+A.INT_ACCR))/SUM(A.LEG1_VALUE+A.INT_ACCR) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+           'RR' "COL6"
+
+
+          FROM DN_TRN_REPO_FRESH A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.LEND_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE+A.INT_ACCR)) "COL3",
+          SUM(A.YEILD*100*DN_LIMIT_DEDUCT_SUM(A.LEG1_VALUE+A.INT_ACCR) )/DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE+A.INT_ACCR))  "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+            1200 "COL5",
+           'RE' "COL6"
+          FROM DN_TRN_REPO_ROLLOVER A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.BORR_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.LEG1_VALUE+A.INT_ACCR) "COL3",
+          SUM(YEILD*100*(A.LEG1_VALUE+A.INT_ACCR))/SUM(A.LEG1_VALUE+A.INT_ACCR) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+           'RR' "COL6"
+
+          FROM DN_TRN_REPO_ROLLOVER A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.LEND_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE)) "COL3",
+          SUM(A.YEILD_PER_NET*100*DN_LIMIT_DEDUCT_SUM(A.LEG1_VALUE) )/DN_LIMIT_DEDUCT_SUM(SUM(A.LEG1_VALUE))  "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+           1200 "COL5",
+           'RE' "COL6"
+          FROM DN_TRN_BL_FUND A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.BORR_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))
+
+      UNION ALL
+       SELECT
+          DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL1",
+          DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) "COL2",
+          SUM(A.LEG1_VALUE) "COL3",
+          SUM(A.YEILD_PER_NET*100*A.LEG1_VALUE)/SUM(A.LEG1_VALUE) "COL4",
+          --SUM(A.CARR_VAL*CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY')))/SUM(A.CARR_VAL) "COL5",
+         1200 "COL5",
+           'RR' "COL6"
+          FROM DN_TRN_BL_FUND A,
+			   DN_REF_PORTFOLIO B
+		  WHERE A.LEND_PORTFOLIO_CODE =B.PORTFOLIO_CODE  --TO IDENTIFY BUY/SALE
+	              AND
+	                    A.EFF_VALDATE<=TO_DATE(M_DATE,'DD/MM/YYYY')
+		          AND
+	                    A.MATURITY_DATE>TO_DATE(M_DATE,'DD/MM/YYYY')--
+		          AND
+			            A.APP_STATUS!='CANCEL'
+                  AND
+	                    B.PF_TYPE='P'
+                  AND
+                        B.OWNED_BY_MBFSL='Y'
+                  --AND
+                        --APP_STATUS NOT IN ('CONF','CANCEL')
+          GROUP BY DN_LIMIT_EXPO_FIN_START_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))),
+                   DN_LIMIT_EXPO_FIN_END_DAYS(CEIL(A.MATURITY_DATE-TO_DATE(M_DATE,'DD/MM/YYYY'))) )TAB ;
+
+   BEGIN
+
+       DELETE DN_TEMP_EXPOSURE;
+
+   OPEN MY_CUR;
+   LOOP
+          M_START :=0;
+          M_END :=0;
+          M_AMOUNT :=0;
+          M_WAVG :=0;
+          M_WDAYS :=0;
+
+     FETCH MY_CUR INTO M_START,M_END,M_AMOUNT,M_WAVG,M_WDAYS,M_DESC;
+   EXIT WHEN MY_CUR%NOTFOUND;
+
+           IF(M_DESC='IN')THEN
+             UPDATE  DN_TEMP_EXPOSURE
+             SET  AMOUNT_INV=M_AMOUNT,
+                  WAVG_INV=M_WAVG,
+                  WDAYS_INV=M_WDAYS ,
+                  DESCRIPTION_INV=M_DESC
+             WHERE START_DAYS=M_START AND
+                   END_DAYS=M_END;
+           ELSIF (M_DESC='RR')THEN
+             UPDATE  DN_TEMP_EXPOSURE
+             SET  AMOUNT_RR=M_AMOUNT,
+                  WAVG_RR=M_WAVG,
+                  WDAYS_RR=M_WDAYS ,
+                  DESCRIPTION_RR=M_DESC
+             WHERE START_DAYS=M_START AND
+                   END_DAYS=M_END;
+           ELSIF (M_DESC='RE')THEN
+             UPDATE  DN_TEMP_EXPOSURE
+             SET  AMOUNT_R=M_AMOUNT,
+                  WAVG_R=M_WAVG,
+                  WDAYS_R=M_WDAYS ,
+                  DESCRIPTION_R=M_DESC
+             WHERE START_DAYS=M_START AND
+                   END_DAYS=M_END;
+
+          END IF;
+
+
+
+        IF SQL%NOTFOUND THEN
+               IF(M_DESC='IN')THEN
+                INSERT INTO DN_TEMP_EXPOSURE
+                  (START_DAYS,END_DAYS,AMOUNT_INV,WAVG_INV,WDAYS_INV,DESCRIPTION_INV)
+                VALUES
+                  (M_START,M_END,M_AMOUNT,M_WAVG,M_WDAYS,M_DESC);
+               ELSIF (M_DESC='RR')THEN
+                 INSERT INTO DN_TEMP_EXPOSURE
+                  (START_DAYS,END_DAYS,AMOUNT_RR,WAVG_RR,WDAYS_RR,DESCRIPTION_RR)
+                VALUES
+                  (M_START,M_END,M_AMOUNT,M_WAVG,M_WDAYS,M_DESC);
+              ELSIF (M_DESC='RE')THEN
+                 INSERT INTO DN_TEMP_EXPOSURE
+                  (START_DAYS,END_DAYS,AMOUNT_R,WAVG_R,WDAYS_R,DESCRIPTION_R)
+                VALUES
+                  (M_START,M_END,M_AMOUNT,M_WAVG,M_WDAYS,M_DESC);
+              END IF;
+        END IF;
+
+    END LOOP;
+    COMMIT;
+     CLOSE MY_CUR;
+
+
+        OPEN EXP_LIST FOR
+
+        SELECT START_DAYS,END_DAYS,AMOUNT_INV,WAVG_INV,WDAYS_INV,DESCRIPTION_INV,AMOUNT_RR,WAVG_RR,WDAYS_RR,DESCRIPTION_RR,AMOUNT_R,WAVG_R,WDAYS_R,DESCRIPTION_R
+       -- INTO   MM_START,MM_END,MM_AMOUNT_INV,MM_WAVG_INV,MM_WDAYS_INV,MM_DESC_INV,MM_AMOUNT_RR,MM_WAVG_RR,MM_WDAYS_RR,MM_DESC_RR,MM_AMOUNT_R,MM_WAVG_R,MM_WDAYS_R,MM_DESC_R
+        FROM   DN_TEMP_EXPOSURE
+        ORDER BY START_DAYS ASC;
+
+
+       END DN_FIND_EXPOSURE;
+
+/

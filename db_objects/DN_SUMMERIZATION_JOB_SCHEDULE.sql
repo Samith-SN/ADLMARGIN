@@ -1,0 +1,23 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_SUMMERIZATION_JOB_SCHEDULE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_SUMMERIZATION_JOB_SCHEDULE" 
+AS
+
+JOBNO                NUMBER;
+
+    -- CREATED BY : NIRMALA FERNANDO
+    -- CREATED ON : 24-09-2002
+    -- PURPOSE    : TO RUN THE SUMMERIZATION PROCESS ON MBFSL DEALNET SYSTEM.
+
+
+BEGIN
+
+    DBMS_JOB.SUBMIT(JOBNO, 'DN_TEMP_UPDATE_TB;',SYSDATE+((1/(24*60))*1),'SYSDATE+((1/(24*60))*15)' );
+    --DBMS_JOB.CHANGE(42,'DN_TEMP_UPDATE_TB;',SYSDATE+((1/(24*60))*1),'SYSDATE+((1/(24*60))*10)');
+
+END DN_SUMMERIZATION_JOB_SCHEDULE;
+
+/

@@ -1,0 +1,22 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_BRANCH_NAME
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_BRANCH_NAME" 
+( M_BRANCH_CODE IN DN_REF_PORTFOLIO.BRANCH%TYPE)
+  RETURN VARCHAR2 IS
+
+
+  M_BRANCH            DN_REF_PORTFOLIO.BRANCH%TYPE;
+
+BEGIN
+     SELECT LOC_DESC INTO M_BRANCH FROM DN_REF_LOCATION
+     WHERE  LOC_CODE = M_BRANCH_CODE;
+
+    RETURN M_BRANCH ;
+EXCEPTION
+   WHEN OTHERS THEN
+    RETURN '-' ;
+END; -- Function WD_GET_PORTFOLIO_NAME
+
+/

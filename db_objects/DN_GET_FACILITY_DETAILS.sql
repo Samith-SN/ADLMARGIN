@@ -1,0 +1,101 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_FACILITY_DETAILS
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_FACILITY_DETAILS" (
+    M_PORT_CODE          DN_REF_PORT_ADV.PORT_CODE %TYPE, 
+    M_REQUIRED           VARCHAR2                      
+)
+
+RETURN VARCHAR2
+
+AS
+    
+    M_RETURN             VARCHAR2(200);
+    M_CLIENT_CODE        VARCHAR2(200);
+    M_BROKER_CODE        VARCHAR2(200);
+    M_PRODUCT_CODE       VARCHAR2(200);
+    M_FEE_CODE           VARCHAR2(200);
+    M_FACILITY_MGR_CODE  VARCHAR2(200);
+    
+BEGIN
+
+    IF M_REQUIRED = 'ADVISER_CODE' THEN
+    
+        SELECT A.ADV_CODE
+        INTO   M_RETURN
+        FROM   DN_REF_PORT_ADV A
+        WHERE  A.PORT_CODE = M_PORT_CODE;
+        
+     ELSIF M_REQUIRED = 'CLIENT_CODE' THEN  
+      
+        SELECT A.CLIENT_CODE
+        INTO   M_RETURN
+        FROM   DN_REF_PORTFOLIO A
+        WHERE  A.PORTFOLIO_CODE = M_PORT_CODE;
+        
+    ELSIF M_REQUIRED = 'CLIENT_NAME' THEN 
+    
+        SELECT A.CLIENT_CODE
+        INTO   M_CLIENT_CODE
+        FROM   DN_REF_PORTFOLIO A
+        WHERE  A.PORTFOLIO_CODE = M_PORT_CODE;  
+        
+        SELECT A.FULL_NAME
+        INTO   M_RETURN
+        FROM DN_MAS_CLIENT A
+        WHERE A.CLIENT_CODE = M_CLIENT_CODE;      
+    
+    -- dn_ref_user a
+    ELSIF M_REQUIRED = 'FACILITY_MAN_NAME' THEN 
+    
+        SELECT A.FACILITY_MGR_CODE
+        INTO   M_FACILITY_MGR_CODE
+        FROM   DN_REF_PORTFOLIO A
+        WHERE  A.PORTFOLIO_CODE = M_PORT_CODE; 
+        
+        SELECT A.OTHER_NAMES || ' ' || A.SURNAME
+        INTO   M_RETURN
+        FROM   DN_REF_USER A
+        WHERE  A.DN_USER = M_FACILITY_MGR_CODE;
+        
+        
+    ELSIF M_REQUIRED = 'BROKER_NAME' THEN 
+        
+        SELECT A.BROKER_CODE INTO M_BROKER_CODE
+        FROM DN_REF_PORTFOLIO A
+        WHERE A.PORTFOLIO_CODE = M_PORT_CODE;
+        
+        SELECT A.PF_NAME INTO M_RETURN
+        FROM DN_REF_PORTFOLIO A
+        WHERE A.PORTFOLIO_CODE = M_BROKER_CODE;
+
+     ELSIF M_REQUIRED = 'PRODUCT_NAME' THEN 
+     
+        SELECT A.FA_PRODUCT_CODE INTO M_PRODUCT_CODE
+        FROM DN_REF_PORTFOLIO A
+        WHERE A.PORTFOLIO_CODE = M_PORT_CODE;
+        
+        SELECT A.FA_PRODUCT_DESC INTO M_RETURN
+        FROM FA_CO_MAS_PRODUCT A
+        WHERE A.FA_PRODUCT_CODE = M_PRODUCT_CODE;
+        
+    ELSIF M_REQUIRED = 'FEE_NAME' THEN 
+    
+        SELECT A.FEE_PACK_CODE INTO M_FEE_CODE
+        FROM DN_REF_PORTFOLIO A
+        WHERE A.PORTFOLIO_CODE = M_PORT_CODE;
+        
+        SELECT A.FEE_PACK_DESC INTO M_RETURN
+        FROM FA_CO_MAS_FEES_PACKS A
+        WHERE A.FEE_PACK_CODE = M_FEE_CODE;
+               
+        
+    END IF;    
+            
+    
+    RETURN NVL(M_RETURN, '-');
+    
+END;
+
+/

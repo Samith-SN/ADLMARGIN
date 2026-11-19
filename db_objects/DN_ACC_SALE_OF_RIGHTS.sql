@@ -1,0 +1,86 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_ACC_SALE_OF_RIGHTS
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_ACC_SALE_OF_RIGHTS" 
+(
+M_PORTF_CODE           DN_ACC_LICENCEE_GEN_ACCOUNT.PORTFOLIO_CODE%TYPE,
+M_DN_PORTF_CODE        DN_ACC_LICENCEE_GEN_ACCOUNT.DN_PORTFOLIO_CODE%TYPE,
+M_TRNAMOUNT            DN_ACC_LICENCEE_GEN_ACCOUNT.TRNAMOUNT%TYPE,
+M_ACC_NO               DN_REF_LICENCEE_SETTLEMENT.ACC_NO%TYPE,
+M_LICENCEE_BRANCH_CODE DN_TRN_SALE_OF_RIGHTS.LICENCEE_BRANCH_CODE%TYPE,
+M_LICENCEE_ACCOUNT_NO  DN_TRN_SALE_OF_RIGHTS.LICENEE_ACCOUNT_NO%TYPE,
+M_DN_USER              DN_TRN_SALE_OF_RIGHTS.DN_USER%TYPE,
+M_PROC_DESC            DN_TRN_SALE_OF_RIGHTS.PROC_DESC%TYPE,
+M_EFF_DATE             VARCHAR2,
+M_NUMBER               IN OUT VARCHAR,
+M_PAYEE_BANK           VARCHAR2,
+M_CHEQUE_NO            VARCHAR2,
+M_INST                 DN_TRN_SALE_OF_RIGHTS.INST_CODE%TYPE,
+M_SEC                  DN_TRN_SALE_OF_RIGHTS.SEC_CODE%TYPE
+)
+AS
+
+
+M_DOCREFNO             DN_TRN_SALE_OF_RIGHTS.DOCREFNO%TYPE;
+M_ACC_SYS_REFNO        DN_ACC_LICENCEE_GEN_ACCOUNT.ACC_SYS_REFNO%TYPE;
+
+BEGIN
+
+DN_VALIDATE_SAVE_RIGHTS(M_DN_USER,'WD_Sale_Rights');  --added by ashini on 31/10/2005 for sr0509-047
+
+SELECT 'SORMT'||TO_CHAR(SYSDATE,'YY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_SALE_OF_RIGHT.NEXTVAL),3,'0')
+INTO M_DOCREFNO    FROM DUAL;
+
+ SELECT
+ ACC_SYS_REFNO
+ INTO M_ACC_SYS_REFNO
+ FROM DN_REF_LICENCEE_SETTLEMENT
+ WHERE BRANCH_CODE=M_LICENCEE_BRANCH_CODE
+ AND ACC_NO = M_LICENCEE_ACCOUNT_NO
+ AND ACTIVE_STATUS ='Y';
+
+ INSERT INTO DN_TRN_SALE_OF_RIGHTS
+               (  DOCREFNO,
+                  PORTFOLIO_CODE,
+                  PROC_DESC,INST_CODE,
+                    SEC_CODE,
+                  LICENCEE_BRANCH_CODE,
+                  LICENEE_ACCOUNT_NO,
+                  TRNAMOUNT,
+                  DN_USER,
+                  TRNDATE,
+                      EFF_VAL_DATE,PAYEE_BANK,CHEQUE_NO)
+                VALUES
+                   (  M_DOCREFNO,
+                      M_PORTF_CODE,
+                      M_PROC_DESC,M_INST,M_SEC,
+                      M_LICENCEE_BRANCH_CODE,
+                      M_LICENCEE_ACCOUNT_NO,
+                      M_TRNAMOUNT,
+                      M_DN_USER,
+                      SYSDATE,
+                      TO_DATE(M_EFF_DATE,'DD/MM/YYYY'),
+                      M_PAYEE_BANK,
+                       M_CHEQUE_NO );
+
+DN_ACCOUNT_SALE_OF_RIGHTS('GEN',M_DN_PORTF_CODE,TO_DATE(M_EFF_DATE,'DD/MM/YYYY'),M_TRNAMOUNT,M_DOCREFNO,M_ACC_SYS_REFNO,M_INST) ;
+
+      INSERT INTO DN_TIME_LOG_SETTLE
+          (DOC_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            ( M_DOCREFNO,
+              M_DN_USER,
+              SYSDATE,
+              'PORTFOLIO SALE OF RIGHTS ');
+M_NUMBER:=M_DOCREFNO;
+
+COMMIT;
+
+END DN_ACC_SALE_OF_RIGHTS;
+
+/

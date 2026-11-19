@@ -1,0 +1,24 @@
+--------------------------------------------------------
+--  DDL for Procedure COLLAT_DEAL_PRIOR_DEL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."COLLAT_DEAL_PRIOR_DEL" 
+(
+ M_DEALNO               DN_COLLATERAL_DEALS.DEALNO%TYPE
+)
+AS
+
+  --CREATED BY : NIRMALA FERNANDO
+  --CREATED ON : 10-10-2002
+  --TO SAVE THE COLLATERAL DEAL NUMBERS ALONG WITH THE DEALNO
+
+ BEGIN
+
+    DELETE FROM DN_COLLATERAL_DEALS
+    WHERE       DEALNO=M_DEALNO;
+
+ COMMIT;
+  END COLLAT_DEAL_PRIOR_DEL;
+
+/

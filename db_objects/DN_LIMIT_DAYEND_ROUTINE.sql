@@ -1,0 +1,34 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_LIMIT_DAYEND_ROUTINE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_LIMIT_DAYEND_ROUTINE" 
+(
+    M_DATE DN_INV_OUTPS_DEAL_SEC.EFF_VALDATE%TYPE
+)
+AS
+
+    -- Function     : DAY END ROUTINE FOR THE LIMIT SCREEN
+    -- System       : DEALNET System
+    -- Created by   : V.Sukathisvaran
+    -- Created on   : 31/01/2000
+
+
+BEGIN
+
+--DN_LIMIT_EXPIRE_ACTIVE_STATUS(M_DATE); -- BY SUKATHIS -to change the valid status
+
+
+DN_LIMIT_DAYEND_OVRL(M_DATE);   -- BY SUKATHIS
+DN_LIMIT_DAYEND_OVRL_MATU(M_DATE);  --BY DAYAN
+DN_LIMIT_DAYEND_OVRL_EXPO(M_DATE);  -- BY SUKATHIS
+DN_LIMIT_DAYEND_ISS_INST_AMT(M_DATE);  -- BY NIRMALA
+DN_LIMIT_DAYEND_TRA_ISSUE_MAT(M_DATE);  -- BY NIRMALA
+DN_LIMIT_DAYEND_ISS_HOL_PERIOD(M_DATE);  -- BY NIRMALA
+
+COMMIT;
+
+END DN_LIMIT_DAYEND_ROUTINE;
+
+/

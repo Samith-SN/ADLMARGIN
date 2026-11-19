@@ -1,0 +1,592 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_UP_AFT_BO_INV_RECEIPT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_UP_AFT_BO_INV_RECEIPT" 
+   (
+    M_DEAL_NO            DN_TRN_BO_INV_RECEIPT.DEAL_NO%TYPE,
+    M_INST_TYPE          DN_TRN_BO_INV_RECEIPT.INST_TYPE%TYPE,
+    M_SECURITY_CODE      DN_TRN_BO_INV_RECEIPT.SECURITY_CODE%TYPE,
+    M_SERIAL_NO          DN_TRN_BO_INV_RECEIPT.SERIAL_NO%TYPE,
+    M_FACE_VALUE         DN_TRN_BO_INV_RECEIPT.FACE_VALUE%TYPE,
+    M_INV_CODE           DN_TRN_BO_INV_RECEIPT.INV_CODE%TYPE,
+    M_LOCATION           DN_TRN_REPO_FRESH.LEND_PORTFOLIO_CODE%TYPE ,
+    M_CURR_CODE          DN_REF_EXCHANGE_RATES.CURR_CODE%TYPE--,--CURRENCY
+    --M_PREV_BAL           DN_TRN_BO_INV_RECEIPT.FACE_VALUE%TYPE--CURRENCY
+   )
+
+   IS
+
+    -- Procedue     : Update Relevent sub inventory after bo inv. receipts
+    -- System       : Dealnet system
+    -- Created by   : D.P. Pubudu Thushara
+    -- Created on   : 14/07/1999
+    -- Modified on  : 01/09/1999
+
+ M_COUNT                    NUMBER;
+ M_LEND_PORTFOLIO_CODE      DN_TRN_REPO_FRESH.LEND_PORTFOLIO_CODE%TYPE;
+ M_BORR_PF_TYPE             DN_REF_PORTFOLIO.PF_TYPE%TYPE;
+MN_COUNT1             NUMBER;--CURRENCY
+  --M_CURR_CODE         DN_REF_EXCHANGE_RATES.CURR_CODE%TYPE;--CURRENCY
+  M_CURRENCY_VALUE         DN_REF_EXCHANGE_RATES.CURRENCY_VALUE%TYPE;--CURRENCY
+BEGIN
+
+
+IF SUBSTR(M_DEAL_NO,1,2)='BF' THEN
+
+   SELECT
+      B.PF_TYPE,
+      A.LEND_PORTFOLIO_CODE
+      INTO M_BORR_PF_TYPE,
+           M_LEND_PORTFOLIO_CODE
+
+   FROM
+      DN_TRN_BL_FUND A,
+      DN_REF_PORTFOLIO B
+   WHERE
+      A.DEAL_NO=M_DEAL_NO
+      AND
+      A.BORR_PORTFOLIO_CODE=B.PORTFOLIO_CODE;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_BL_FUND_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_BL_FUND_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        'OR',  --For borrower
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE,
+        'BOR',
+        M_LOCATION
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_BL_FUND_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+
+   DN_INV_BL_RF_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_INV_CODE,M_LOCATION);
+
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='BS' THEN
+
+   --Problem with location
+
+   SELECT
+      B.PF_TYPE,
+      A.LEND_PORTFOLIO_CODE
+      INTO M_BORR_PF_TYPE,
+           M_LEND_PORTFOLIO_CODE
+
+   FROM
+      DN_TRN_BL_SECURITY A,
+      DN_REF_PORTFOLIO B
+   WHERE
+      A.DEAL_NO=M_DEAL_NO
+      AND
+      A.BORR_PORTFOLIO_CODE=B.PORTFOLIO_CODE;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_BL_SECURITY_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_BL_SECURITY_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        'OR',  --For borrower
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE,
+        'BOR',
+        M_LOCATION
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_BL_SECURITY_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+
+   DN_INV_BL_SEC_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_INV_CODE,M_LOCATION);
+
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='OR' THEN
+  --------------CURRENCY----------------------------------------
+     SELECT COUNT(*)
+     INTO   MN_COUNT1
+     FROM   DN_TRN_DEAL_CURRENCY
+     WHERE  DEAL_NO=M_DEAL_NO;
+
+IF(MN_COUNT1>0)THEN--CURRENCY
+
+
+       SELECT   CURRENCY_VALUE
+       INTO     M_CURRENCY_VALUE
+       FROM     DN_REF_EXCHANGE_RATES
+       WHERE    CURR_CODE=M_CURR_CODE;
+
+ SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_OUTP_SALE_SEC
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_OUTP_SALE_SEC
+       (DEAL_NO,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        FACE_VALUE_CURR--CURRENCY
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE*M_CURRENCY_VALUE,--CURRENCY
+        'BOR',
+        M_FACE_VALUE--CURRENCY
+        );
+
+   END IF;
+
+ELSE--CURRENCY
+
+
+
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_OUTP_SALE_SEC
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_OUTP_SALE_SEC
+       (DEAL_NO,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE,
+        'BOR'
+         );
+
+   END IF;
+   END IF;--CURRENCY
+   DN_INV_OUTPS_UP_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_CURR_CODE);-- ,M_PREV_BAL CURRENCY
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='RF' THEN
+
+  --------------CURRENCY----------------------------------------
+     SELECT COUNT(*)
+     INTO   MN_COUNT1
+     FROM   DN_TRN_DEAL_CURRENCY
+     WHERE  DEAL_NO=M_DEAL_NO;
+
+IF(MN_COUNT1>0)THEN--CURRENCY
+
+
+       SELECT   CURRENCY_VALUE
+       INTO     M_CURRENCY_VALUE
+       FROM     DN_REF_EXCHANGE_RATES
+       WHERE    CURR_CODE=M_CURR_CODE;
+
+   SELECT
+      B.PF_TYPE,
+      A.LEND_PORTFOLIO_CODE
+      INTO M_BORR_PF_TYPE,
+           M_LEND_PORTFOLIO_CODE
+
+   FROM
+      DN_TRN_REPO_FRESH A,
+      DN_REF_PORTFOLIO B
+   WHERE
+      A.DEAL_NO=M_DEAL_NO
+      AND
+      A.BORR_PORTFOLIO_CODE=B.PORTFOLIO_CODE;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_REPO_FRESH_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_REPO_FRESH_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION,
+        FACE_VALUE_CURR--CURRENCY
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        M_INV_CODE,  --For borrower
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE*M_CURRENCY_VALUE,--CURRENCY
+        'BOR',
+        M_LOCATION,
+        M_FACE_VALUE--CURRENCY
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_REPO_FRESH_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+
+
+
+
+ELSE--CURRENCY
+   SELECT
+      B.PF_TYPE,
+      A.LEND_PORTFOLIO_CODE
+      INTO M_BORR_PF_TYPE,
+           M_LEND_PORTFOLIO_CODE
+
+   FROM
+      DN_TRN_REPO_FRESH A,
+      DN_REF_PORTFOLIO B
+   WHERE
+      A.DEAL_NO=M_DEAL_NO
+      AND
+      A.BORR_PORTFOLIO_CODE=B.PORTFOLIO_CODE;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_REPO_FRESH_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_REPO_FRESH_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        M_INV_CODE,  --For borrower
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE,
+        'BOR',
+        M_LOCATION
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_REPO_FRESH_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+   END IF;--CURRENCY
+   DN_INV_REPO_RF_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_INV_CODE,M_LOCATION,M_CURR_CODE);--CURRENCY
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='RP' THEN
+
+   M_COUNT:=0;
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='RR' THEN
+
+   --------------CURRENCY----------------------------------------
+     SELECT COUNT(*)
+     INTO   MN_COUNT1
+     FROM   DN_TRN_DEAL_CURRENCY
+     WHERE  DEAL_NO=M_DEAL_NO;
+
+IF(MN_COUNT1>0)THEN--CURRENCY
+
+
+       SELECT   CURRENCY_VALUE
+       INTO     M_CURRENCY_VALUE
+       FROM     DN_REF_EXCHANGE_RATES
+       WHERE    CURR_CODE=M_CURR_CODE;
+
+     SELECT
+      LEND_PORTFOLIO_CODE
+      INTO M_LEND_PORTFOLIO_CODE
+   FROM
+      DN_TRN_REPO_ROLLOVER
+   WHERE
+      DEAL_NO=M_DEAL_NO;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_REPO_ROLLOVER_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_REPO_ROLLOVER_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION,
+        FACE_VALUE_CURR--CURRENCY
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        M_INV_CODE,
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE*M_CURRENCY_VALUE,--CURRENCY
+        'BOR',
+        M_LOCATION,
+        M_FACE_VALUE--CURRENCY
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_REPO_ROLLOVER_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          INV_CODE=M_INV_CODE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+
+ELSE--CURRENCY
+  SELECT
+      LEND_PORTFOLIO_CODE
+      INTO M_LEND_PORTFOLIO_CODE
+   FROM
+      DN_TRN_REPO_ROLLOVER
+   WHERE
+      DEAL_NO=M_DEAL_NO;
+
+   SELECT
+      COUNT(*) INTO M_COUNT
+   FROM
+      DN_TRN_REPO_ROLLOVER_SERIAL_NO
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      INST_TYPE=M_INST_TYPE
+      AND
+      SECURITY_CODE=M_SECURITY_CODE
+      AND
+      SERIAL_NO=M_SERIAL_NO;
+
+  IF M_COUNT=0 THEN
+
+     INSERT INTO DN_TRN_REPO_ROLLOVER_SERIAL_NO
+       (DEAL_NO,
+        INST_TYPE,
+        INV_CODE,
+        SECURITY_CODE,
+        SERIAL_NO,
+        FACE_VALUE,
+        DATA_FROM,
+        LOCATION
+       )
+      VALUES
+       (M_DEAL_NO,
+        M_INST_TYPE,
+        M_INV_CODE,
+        M_SECURITY_CODE,
+        M_SERIAL_NO,
+        M_FACE_VALUE,
+        'BOR',
+        M_LOCATION
+       );
+
+   ELSE
+
+       -- Changing location of 'FO' serial no
+
+       UPDATE DN_TRN_REPO_ROLLOVER_SERIAL_NO
+          SET LOCATION=M_LOCATION
+       WHERE
+          DEAL_NO=M_DEAL_NO
+          AND
+          INST_TYPE=M_INST_TYPE
+          AND
+          INV_CODE=M_INV_CODE
+          AND
+          SECURITY_CODE=M_SECURITY_CODE
+          AND
+          SERIAL_NO=M_SERIAL_NO;
+
+   END IF;
+   END IF;--CURRENCY
+   DN_INV_REPO_RR_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_INV_CODE,M_LOCATION,M_CURR_CODE);--CURRENCY
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='RS' THEN
+
+   DN_INV_REPO_RS_DEAL_SERNO_BOR(M_DEAL_NO,M_INST_TYPE,M_SECURITY_CODE,M_SERIAL_NO,M_FACE_VALUE,M_INV_CODE,M_LOCATION);
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='SO' THEN
+
+   M_COUNT:=0;
+
+ELSIF SUBSTR(M_DEAL_NO,1,2)='SR' THEN
+
+   M_COUNT:=0;
+
+END IF;
+
+
+END DN_INV_UP_AFT_BO_INV_RECEIPT;
+
+/

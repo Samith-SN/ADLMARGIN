@@ -1,0 +1,292 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_LIMIT_DAYEND_OVRL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_LIMIT_DAYEND_OVRL" 
+
+(
+	M_DATE1    	 DN_INV_OUTPS_DEAL_SEC.EFF_VALDATE%TYPE
+)
+
+AS
+
+    -- Function     : Calculate totall face value at the end of the day and update
+		--								Transaction and violation tables
+    -- System       : DEALNET System
+    -- Created by   : V.Sukathisvaran
+    -- Created on   : 20/12/1999
+
+	TOTAL						DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+    TOTAL_B						DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+    TOTAL_S						DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+    TOTAL1						DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+	M_LIMIT_CODE       			LMT_STR_OVRL_AMT.LIMIT_CODE%TYPE;
+	M_ACTIVE_STATUS				LMT_ACT_DETAILS.ACTIVE_STATUS%TYPE;
+	M_COUNT						NUMBER;
+	M_ACTIVE_COUNT				NUMBER;
+    M_COUNT_INFLOW              DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+    M_COUNT_OUTFLOW             DN_INV_OUTPS_DEAL_SEC.FACE_VAL%TYPE;
+    M_DEAL_INFLOW               NUMBER;
+    M_DEAL_OUTFLOW              NUMBER;
+	/*M_DATE1					DN_INV_OUTPS_DEAL_SEC.EFF_VALDATE%TYPE;*/
+    M_COUNT1                    NUMBER;
+    M_COUNT2                    NUMBER;
+    M_COUNT3                    NUMBER;
+    M_LIMIT_CODE_MIN            LMT_STR_OVRL_AMT.LIMIT_CODE%TYPE;
+    M_COUNT_LIMIT_CODE_MIN      NUMBER;
+
+BEGIN
+
+INSERT INTO LMT_EXC_HIS
+		(	LIMIT_CODE ,
+			VIOLATED_DATE ,
+			VIOLATED_BY ,
+			ACTIVATED_TYPE ,
+			HIS_ACTIVATED_TYPE )
+			( SELECT LIMIT_CODE ,
+					VIOLATED_DATE ,
+					VIOLATED_BY ,
+					ACTIVATED_TYPE ,
+					ACTIVATED_TYPE
+					FROM LMT_EXC_CURRENT WHERE LIMIT_CODE LIKE '01%');
+
+	DELETE FROM LMT_EXC_CURRENT WHERE LIMIT_CODE LIKE '01%';
+    DELETE FROM LMT_EXC_UNCONF WHERE LIMIT_CODE LIKE '01%';
+      /* SELECT TO_DATE(M_DATE1,'DD/MM/YYYY') INTO M_DATE1 FROM DUAL; */
+
+/* 		CALCULATE TOTALL FACE VALUE AT THE END OF THE DAY	*/
+	/* 		SECURITY LEVEL TABLE		*/
+-----------------------------------------------------------------------------------------
+    SELECT COUNT(*) INTO M_COUNT1
+		FROM DN_INV_OUTPS_DEAL_SEC A, DN_REF_PORTFOLIO C
+        WHERE A.EFF_VALDATE<=M_DATE1
+				AND A.TRN_TYPE ='B'
+                AND C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	            AND C.PF_TYPE='P'
+                AND C.OWNED_BY_MBFSL='Y'
+                AND A.SECURITY_CODE IN
+		             (SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1);
+    IF  (M_COUNT1>0) THEN
+    	    SELECT SUM(CARR_VAL) INTO TOTAL_B
+    		FROM DN_INV_OUTPS_DEAL_SEC A, DN_REF_PORTFOLIO C
+            WHERE A.EFF_VALDATE<=M_DATE1
+    				AND A.TRN_TYPE ='B'
+                    AND C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	                AND C.PF_TYPE='P'
+                    AND C.OWNED_BY_MBFSL='Y'
+                    AND A.SECURITY_CODE IN
+    		              (SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1);
+    END IF;
+
+-----------------------------------------------------------------------------------------------
+
+
+    SELECT COUNT(*) INTO M_COUNT2
+		FROM DN_INV_OUTPS_DEAL_SEC A, DN_REF_PORTFOLIO C
+        WHERE A.EFF_VALDATE<=M_DATE1
+				    AND A.TRN_TYPE ='S'
+                    AND C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	                AND C.PF_TYPE='P'
+                    AND C.OWNED_BY_MBFSL='Y'
+                    AND A.SECURITY_CODE IN
+		                  (	SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1);
+      IF  (M_COUNT2>0) THEN
+    	SELECT SUM(CARR_VAL) INTO TOTAL_S
+    		FROM DN_INV_OUTPS_DEAL_SEC A, DN_REF_PORTFOLIO C
+            WHERE A.EFF_VALDATE<=M_DATE1
+    				/*AND A.EFF_VALDATE BETWEEN B.DATE_CREATED AND B.NEXT_LIMIT_REFRESH_DATE*/
+    				AND A.TRN_TYPE ='S'
+                    AND C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	                AND C.PF_TYPE='P'
+                    AND C.OWNED_BY_MBFSL='Y'
+                    AND A.SECURITY_CODE IN
+    		               (SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1);
+      END IF;
+
+---------------------------------------------------------------------------------------------
+
+    /* 	SERIAL LEVEL TABLE	*/
+    SELECT COUNT(*) INTO M_COUNT3
+    	FROM DN_INV_OUTPS_DEAL_SERIAL_NO A, DN_REF_PORTFOLIO C
+        WHERE A.EFF_VALDATE<= M_DATE1
+				AND ((A.SERIAL_NO_STATUS='INV')
+                      OR  (TO_DATE(TO_CHAR(A.SALE_EFF_VALDATE,'DD-MM-YYYY'),'DD-MM-YYYY')>M_DATE1)
+                      OR  (A.SALE_EFF_VALDATE IS NULL))
+                AND   C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	            AND   C.PF_TYPE='P'
+                AND   C.OWNED_BY_MBFSL='Y'
+                AND   A.SECURITY_CODE IN
+		               (SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE >  M_DATE1);
+
+    IF  (M_COUNT3>0) THEN
+    	SELECT SUM(CARR_VAL) INTO TOTAL1
+    		FROM DN_INV_OUTPS_DEAL_SERIAL_NO A, DN_REF_PORTFOLIO C
+            WHERE A.EFF_VALDATE<= M_DATE1
+    				AND ((A.SERIAL_NO_STATUS='INV')
+                    OR   (TO_DATE(TO_CHAR(A.SALE_EFF_VALDATE,'DD-MM-YYYY'),'DD-MM-YYYY')>M_DATE1)
+                    OR   (A.SALE_EFF_VALDATE IS NULL))
+                    AND  C.PORTFOLIO_CODE=A.PORTFOLIO_CODE
+  	                AND  C.PF_TYPE='P'
+                    AND  C.OWNED_BY_MBFSL='Y'
+                    AND A.SECURITY_CODE IN
+    	                	(SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1	);
+   END IF;
+---------------------------------------------------------------------------------------------
+/* FROM TRANSACTION TABLE(NOT CONFIRMED AND NOT CANCELLED)  */
+
+ SELECT COUNT(*) INTO M_COUNT_INFLOW
+   FROM
+      DN_TRN_OUTP_SALE A,
+      DN_REF_PORTFOLIO B
+   WHERE
+        A.EFF_VALDATE<= M_DATE1
+      AND A.SECURITY_CODE IN
+		(
+		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1--
+		)
+      AND
+        B.PORTFOLIO_CODE=A.BUY_PORTFOLIO_CODE
+      AND
+        B.PF_TYPE='P'
+      AND
+        B.OWNED_BY_MBFSL='Y'
+      AND
+        A.APP_STATUS NOT IN ('CONF','CANCEL');
+IF (M_COUNT_INFLOW>0) THEN
+	SELECT SUM(COST) INTO M_DEAL_INFLOW
+	   FROM
+	      DN_TRN_OUTP_SALE A,
+	      DN_REF_PORTFOLIO B
+	   WHERE
+          A.EFF_VALDATE<= M_DATE1
+          AND A.SECURITY_CODE IN
+    		(
+    		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1--
+    	   	)
+          AND
+    	      B.PORTFOLIO_CODE=A.BUY_PORTFOLIO_CODE
+  	      AND
+	          B.PF_TYPE='P'
+          AND
+              B.OWNED_BY_MBFSL='Y'
+          AND
+              APP_STATUS NOT IN ('CONF','CANCEL');
+ELSE
+		M_DEAL_INFLOW:=0;
+END IF;
+
+
+SELECT COUNT(*) INTO M_COUNT_OUTFLOW
+   FROM
+      DN_TRN_OUTP_SALE A,
+      DN_REF_PORTFOLIO B
+   WHERE
+      A.EFF_VALDATE<= M_DATE1
+      AND A.SECURITY_CODE IN
+  	 (
+  		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1--
+  	  )
+      AND
+        B.PORTFOLIO_CODE=A.SELL_PORTFOLIO_CODE
+      AND
+        B.PF_TYPE='P'
+      AND
+        B.OWNED_BY_MBFSL='Y'
+      AND
+        APP_STATUS NOT IN ('CONF','CANCEL');
+IF (M_COUNT_OUTFLOW>0) THEN
+	SELECT SUM(COST) INTO M_DEAL_OUTFLOW
+	   FROM
+	      DN_TRN_OUTP_SALE A,
+	      DN_REF_PORTFOLIO B
+	   WHERE
+          A.EFF_VALDATE<= M_DATE1
+          AND A.SECURITY_CODE IN
+    		(
+    		SELECT SECURITY_CODE FROM DN_REF_SECURITY WHERE  MATURITY_DATE > M_DATE1--
+    	   	)
+          AND
+    	      B.PORTFOLIO_CODE=A.SELL_PORTFOLIO_CODE
+  	      AND
+	          B.PF_TYPE='P'
+          AND
+              B.OWNED_BY_MBFSL='Y'
+          AND
+              APP_STATUS NOT IN ('CONF','CANCEL');
+
+ELSE
+	M_DEAL_OUTFLOW:=0;
+END IF;
+
+
+    TOTAL:=TOTAL_B+TOTAL_S+TOTAL1+M_DEAL_INFLOW-M_DEAL_OUTFLOW ;
+/* RAISE_APPLICATION_ERROR(-20201,'*** '||TOTAL);	*/
+	/*		INSERT TO THE TRADING TABLE		*/
+	DELETE FROM LMT_UTL_OVRL_TRA;
+
+	INSERT INTO LMT_UTL_OVRL_TRA
+		 (LIMIT_TYPE,BF_UTILIZATION,DEAL_INFLOW,DEAL_OUTFLOW,CURRENT_UTILIZATION)
+			VALUES ('01', TOTAL , '' , '' , TOTAL );
+
+/*	@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@	*/
+	/* 		UPDATE THE VIOLATION HISTORY TABLE			*/
+
+    IF (TOTAL>=0) THEN --FOR NEGATIVE AMOUNTS NO VIOLATIONS
+    	M_LIMIT_CODE:='00';
+    	SELECT COUNT(*) INTO M_COUNT FROM LMT_STR_OVRL_AMT
+    			WHERE TOTAL > START_AMOUNT AND TOTAL <= END_AMOUNT AND CONDITION='B' ;
+
+    	IF 	(M_COUNT > 0) THEN
+    		SELECT LIMIT_CODE INTO M_LIMIT_CODE FROM LMT_STR_OVRL_AMT
+    			WHERE TOTAL > START_AMOUNT AND TOTAL <= END_AMOUNT AND CONDITION='B' ;
+    	END IF;
+
+    	/*		IF THE END AMOUNT IS OPEN ENDED		*/
+    	IF 	(M_LIMIT_CODE='00') THEN
+    		SELECT LIMIT_CODE INTO M_LIMIT_CODE FROM LMT_STR_OVRL_AMT
+    				WHERE CONDITION='G' ;
+    	END IF;
+
+  /* 		CHECK THE ACTIVE STATUS			*/
+  			/* 		LIMIT CREATED.CHECKING WHETHER ACTIVE OR NOT.ATLEAT ONE RECORD SHOULD BE ACTIVE			*/
+  		SELECT COUNT(*) INTO M_ACTIVE_COUNT FROM LMT_ACT_DETAILS
+  			WHERE LIMIT_CODE=M_LIMIT_CODE AND ACTIVE_STATUS='Y' ;
+
+  				IF ( M_ACTIVE_COUNT > 0 ) THEN
+  					M_ACTIVE_STATUS:='Y';
+  				ELSE
+  					M_ACTIVE_STATUS:='N';
+  				END IF;
+
+
+  				IF (M_ACTIVE_STATUS='Y') THEN
+  					/* IT IS ACTIVATED.NO VIOLATION.*/
+  						NULL;
+  				ELSIF (M_ACTIVE_STATUS='N') THEN
+  					/* IT IS NOT ACIVE.SO THERE IS A VIOLATION	*/
+                          SELECT COUNT(*) INTO M_COUNT_LIMIT_CODE_MIN
+                              FROM LMT_ACT_DETAILS
+                              WHERE  ACTIVE_STATUS='Y'
+                              AND LIMIT_TYPE='01';
+                              IF (M_COUNT_LIMIT_CODE_MIN>0) THEN
+                                  SELECT MAX(LIMIT_CODE) INTO M_LIMIT_CODE_MIN
+                                  FROM LMT_ACT_DETAILS
+                                  WHERE  ACTIVE_STATUS='Y'
+                                  AND LIMIT_TYPE='01';
+                              ELSE
+                                  --IF NO LIMIT CODE WAS ACTIVATED
+                                  M_LIMIT_CODE_MIN:='01-0001';
+                              END IF;
+
+                          INSERT INTO LMT_EXC_CURRENT
+  				        ( LIMIT_CODE, VIOLATED_DATE, VIOLATED_BY, ACTIVATED_TYPE )
+  				        VALUES (M_LIMIT_CODE_MIN , SYSDATE , '' ,'Y') ;
+
+  				END IF;
+  END IF;
+
+
+END DN_LIMIT_DAYEND_OVRL;
+
+/

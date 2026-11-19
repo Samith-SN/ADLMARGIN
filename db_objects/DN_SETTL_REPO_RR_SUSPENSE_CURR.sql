@@ -1,0 +1,401 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_SETTL_REPO_RR_SUSPENSE_CURR
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_SETTL_REPO_RR_SUSPENSE_CURR" 
+   (
+    M_DEAL_NO      DN_TRN_REPO_ROLLOVER.DEAL_NO%TYPE
+   )
+
+   IS
+
+    -- Procedue     : Update Repo Rollover settlement suspense
+    -- System       : Dealnet system
+    -- Created by   : D.P. Pubudu Thushara
+    -- Created on   : 06/08/1999
+
+
+    M_BORR_PORTFOLIO_CODE     DN_TRN_REPO_ROLLOVER.BORR_PORTFOLIO_CODE%TYPE;
+    M_LEND_PORTFOLIO_CODE     DN_TRN_REPO_ROLLOVER.LEND_PORTFOLIO_CODE%TYPE;
+    M_BORR_PF_TYPE            DN_REF_PORTFOLIO.PF_TYPE%TYPE;
+    M_LEND_PF_TYPE            DN_REF_PORTFOLIO.PF_TYPE%TYPE;
+    M_DEAL_LEG1_VALUE         DN_TRN_REPO_ROLLOVER.LEG1_VALUE%TYPE;
+    M_PRIOR_DEAL_NO           DN_TRN_REPO_ROLLOVER.PRIOR_DEAL_NO%TYPE;
+    M_PRIOR_DEAL_LEG2_VALUE   DN_TRN_REPO_ROLLOVER.LEG2_VALUE%TYPE;
+    M_CURR_ACC_VALUE          DN_TRN_REPO_ROLLOVER.LEG2_VALUE%TYPE;
+MM_CURRENCY_SETTLE_AMOUNT  DN_TRN_REPO_ROLLOVER_SETTLE.CURRENCY_SETTLE_AMOUNT%TYPE;--CURRENCY
+M_PAYMENT_TO_BORR     DN_TRN_REPO_ROLLOVER.PAYMENT_TO_BORR%TYPE;--CURRENCY
+M_PAYMENT_TO_LEND     DN_TRN_REPO_ROLLOVER.PAYMENT_TO_LEND%TYPE;--CURRENCY
+
+BEGIN
+MM_CURRENCY_SETTLE_AMOUNT:=NULL;--CURRENCY
+
+
+   SELECT
+      A.BORR_PORTFOLIO_CODE,
+      A.LEND_PORTFOLIO_CODE,
+      B.PF_TYPE,
+      C.PF_TYPE,
+      A.LEG1_VALUE,
+      A.PRIOR_DEAL_NO,
+      A.PAYMENT_TO_BORR,A.PAYMENT_TO_LEND--CURRENCY
+      INTO  M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+            M_BORR_PF_TYPE,M_LEND_PF_TYPE,M_DEAL_LEG1_VALUE,M_PRIOR_DEAL_NO,
+            M_PAYMENT_TO_BORR,M_PAYMENT_TO_LEND--CURRENCY
+   FROM
+      DN_TRN_REPO_ROLLOVER A,
+      DN_REF_PORTFOLIO B,
+      DN_REF_PORTFOLIO C
+   WHERE
+      A.DEAL_NO=M_DEAL_NO
+      AND
+      A.BORR_PORTFOLIO_CODE=B.PORTFOLIO_CODE
+      AND
+      A.LEND_PORTFOLIO_CODE=C.PORTFOLIO_CODE;
+
+
+
+   SELECT
+      NVL(SUM(SETTLE_AMOUNT),0),SUM(CURRENCY_SETTLE_AMOUNT)--CURRENCY
+      INTO M_CURR_ACC_VALUE,MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+   FROM
+      DN_TRN_REPO_ROLLOVER_SETTLE
+   WHERE
+      DEAL_NO=M_DEAL_NO
+      AND
+      SETTLE_MODE<>'CURR_ACC';
+
+/*IF SUBSTR(M_PRIOR_DEAL_NO,1,2)='RF' THEN
+
+   SELECT
+      A.LEG2_VALUE
+      INTO  M_PRIOR_DEAL_LEG2_VALUE
+   FROM
+      DN_TRN_REPO_FRESH A
+   WHERE
+      A.DEAL_NO=M_PRIOR_DEAL_NO;
+
+ELSIF SUBSTR(M_PRIOR_DEAL_NO,1,2)='RR' THEN
+
+   --SELECT
+    --  SUM(SETTLE_AMOUNT)
+    --  INTO M_CURR_ACC_VALUE
+   --FROM
+    --  DN_TRN_REPO_ROLLOVER_SETTLE
+   --WHERE
+    --  DEAL_NO=M_PRIOR_DEAL_NO
+    --  AND
+    --  SETTLE_MODE='CURR_ACC';
+
+   SELECT
+      A.LEG2_VALUE
+      INTO  M_PRIOR_DEAL_LEG2_VALUE
+   FROM
+      DN_TRN_REPO_ROLLOVER A
+   WHERE
+      A.DEAL_NO=M_PRIOR_DEAL_NO;
+
+END IF;*/
+
+IF(M_PAYMENT_TO_LEND>0 AND M_BORR_PF_TYPE='P')THEN
+
+INSERT INTO DN_ACC_SUS_PAYMENT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            PAY_FROM_INT_BAL_AMT,
+            BAL_TO_BE_PAID,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            PAY_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_PAID_CURR--CURRENCY
+           )
+          VALUES
+            (M_DEAL_NO,
+             'D',
+             M_LEND_PORTFOLIO_CODE,
+             M_BORR_PORTFOLIO_CODE,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+         DN_ACC_LINK_REPO_RS_FO_SETT(M_DEAL_NO,M_CURR_ACC_VALUE);
+
+ELSIF(M_PAYMENT_TO_LEND>0 AND M_LEND_PF_TYPE='P')THEN
+
+INSERT INTO DN_ACC_SUS_RECEIPT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            REC_FROM_INT_BAL_AMT,
+            BAL_TO_BE_RECEIVED,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            REC_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_RECEIVED_CURR--CURRENCY
+           )
+       VALUES
+            (M_DEAL_NO,
+             'D',
+             M_LEND_PORTFOLIO_CODE,
+             M_BORR_PORTFOLIO_CODE,
+             M_CURR_ACC_VALUE,-- (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+           DN_ACC_LINK_REPO_RS_FO_SETT(M_DEAL_NO,M_CURR_ACC_VALUE);
+
+
+ELSIF(M_PAYMENT_TO_BORR>0 AND M_BORR_PF_TYPE='P')THEN
+
+
+       INSERT INTO DN_ACC_SUS_RECEIPT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            REC_FROM_INT_BAL_AMT,
+            BAL_TO_BE_RECEIVED,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            REC_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_RECEIVED_CURR--CURRENCY
+           )
+       VALUES
+            (M_DEAL_NO,
+             'D',
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+             M_CURR_ACC_VALUE,-- (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+           DN_ACC_LINK_REPO_RF_FO_SETT(M_DEAL_NO,M_CURR_ACC_VALUE);
+
+ELSIF(M_PAYMENT_TO_BORR>0 AND M_LEND_PF_TYPE='P')THEN
+
+INSERT INTO DN_ACC_SUS_PAYMENT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            PAY_FROM_INT_BAL_AMT,
+            BAL_TO_BE_PAID,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            PAY_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_PAID_CURR--CURRENCY
+           )
+          VALUES
+            (M_DEAL_NO,
+             'D',
+             M_LEND_PORTFOLIO_CODE,
+             M_BORR_PORTFOLIO_CODE,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             M_CURR_ACC_VALUE,--(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+         DN_ACC_LINK_REPO_RF_FO_SETT(M_DEAL_NO,M_CURR_ACC_VALUE);
+
+
+END IF;
+--//////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+  -- Before confiremation they have to specify at least one settlement option
+
+ /* IF M_DEAL_LEG1_VALUE>M_PRIOR_DEAL_LEG2_VALUE
+    AND
+     (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE)>M_CURR_ACC_VALUE THEN
+
+
+     IF M_LEND_PF_TYPE='P' THEN
+
+       INSERT INTO DN_ACC_SUS_PAYMENT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            PAY_FROM_INT_BAL_AMT,
+            BAL_TO_BE_PAID,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            PAY_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_PAID_CURR--CURRENCY
+           )
+          VALUES
+            (M_DEAL_NO,
+             'D',
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+             (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+      END IF;
+
+      IF M_BORR_PF_TYPE='P' THEN
+
+        INSERT INTO DN_ACC_SUS_RECEIPT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            REC_FROM_INT_BAL_AMT,
+            BAL_TO_BE_RECEIVED,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            REC_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_RECEIVED_CURR--CURRENCY
+           )
+       VALUES
+            (M_DEAL_NO,
+             'D',
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+             (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+
+       END IF;
+
+     IF (M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE)>0 THEN
+           ------- Linking to accounting sub system
+         DN_ACC_LINK_REPO_RF_FO_SETT(M_DEAL_NO,(M_DEAL_LEG1_VALUE-M_PRIOR_DEAL_LEG2_VALUE-M_CURR_ACC_VALUE));
+
+     END IF;
+
+
+  ELSIF M_DEAL_LEG1_VALUE<M_PRIOR_DEAL_LEG2_VALUE
+        AND
+        (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE)>M_CURR_ACC_VALUE THEN
+
+        IF M_BORR_PF_TYPE='P' THEN
+
+        INSERT INTO DN_ACC_SUS_PAYMENT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            PAY_FROM_INT_BAL_AMT,
+            BAL_TO_BE_PAID,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            PAY_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_PAID_CURR--CURRENCY
+           )
+          VALUES
+            (M_DEAL_NO,
+             'D',
+             M_LEND_PORTFOLIO_CODE,
+             M_BORR_PORTFOLIO_CODE,
+             (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+      END IF;
+
+      IF M_LEND_PF_TYPE='P' THEN
+
+       INSERT INTO DN_ACC_SUS_RECEIPT
+           (SUS_REF_NO,
+            SUSPENSE_ENTRY_TYPE,
+            RECEIVER,
+            PAYER,
+            TOT_SETTLE_AMOUNT,
+            INT_BAL_SETTLE_AMOUNT,
+            REC_FROM_INT_BAL_AMT,
+            BAL_TO_BE_RECEIVED,
+            ENT_DATE,
+            LAST_MOD_DATE,
+            REC_FROM_INT_BAL_AMT_CURR,--CURRENCY
+            BAL_TO_BE_RECEIVED_CURR--CURRENCY
+           )
+       VALUES
+            (M_DEAL_NO,
+             'D',
+             M_LEND_PORTFOLIO_CODE,
+             M_BORR_PORTFOLIO_CODE,
+             (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE),
+             0,
+             0,
+             (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE),
+             SYSDATE,
+             SYSDATE,
+             0,--CURRENCY
+             MM_CURRENCY_SETTLE_AMOUNT--CURRENCY
+            );
+
+     END IF;
+
+
+     IF  (M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE)>0 THEN
+            ------- Linking to accounting sub system
+          DN_ACC_LINK_REPO_RS_FO_SETT(M_DEAL_NO,(M_PRIOR_DEAL_LEG2_VALUE-M_DEAL_LEG1_VALUE-M_CURR_ACC_VALUE));
+
+     END IF;
+
+  END IF;*/
+
+
+END DN_SETTL_REPO_RR_SUSPENSE_CURR;
+
+/

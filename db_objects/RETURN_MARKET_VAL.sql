@@ -1,0 +1,81 @@
+--------------------------------------------------------
+--  DDL for Function RETURN_MARKET_VAL
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."RETURN_MARKET_VAL" 
+  (
+    M_SECCODE       VARCHAR2,
+    M_DATE          VARCHAR2
+   )
+
+   RETURN  REAL
+
+   IS
+
+
+    -- Function     : This returns market value for the sec. code for the date
+    -- System       : FCLMGT
+    -- Created by   : iNDITHA
+    -- Created on   : 2004-9-7
+    M_COUNT     NUMBER;
+    M_MARVALUE  REAL;
+    M_LDATE     DATE;
+
+BEGIN
+
+    M_COUNT:=0;
+    SELECT MN INTO M_COUNT
+    FROM(
+        SELECT SUM(MN) MN FROM (-- ADDED THIS LINE ON 17-12-2004 BY SVA
+        SELECT COUNT(*) MN
+        FROM  DN_TRN_MARKET_RATE_EQUI
+        WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=TO_DATE(M_DATE,'DD-MM-YYYY')
+        UNION
+        SELECT COUNT(*) MN
+        FROM DN_TRN_MARKET_RATE_DEBT
+        WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=TO_DATE(M_DATE,'DD-MM-YYYY')
+        )-- ADDED THIS LINE ON 17-12-2004 BY SVA
+        );
+
+    IF M_COUNT >0 THEN
+
+       SELECT MR INTO M_MARVALUE
+       FROM(
+        SELECT MARKET_RATE MR
+        FROM  DN_TRN_MARKET_RATE_EQUI
+        WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=TO_DATE(M_DATE,'DD-MM-YYYY')
+        UNION
+        SELECT MARKET_RATE MR
+        FROM DN_TRN_MARKET_RATE_DEBT
+        WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=TO_DATE(M_DATE,'DD-MM-YYYY')
+        );
+    ELSE
+        SELECT MD INTO M_LDATE
+        FROM (
+            SELECT MAX(DN_DATE) MD
+            FROM DN_TRN_MARKET_RATE_EQUI
+            WHERE SECURITY_CODE=M_SECCODE AND DN_DATE<=TO_DATE(M_DATE,'DD-MM-YYYY')
+            GROUP BY SECURITY_CODE
+            UNION
+            SELECT MAX(DN_DATE) MD
+            FROM DN_TRN_MARKET_RATE_DEBT
+            WHERE SECURITY_CODE=M_SECCODE AND DN_DATE<=TO_DATE(M_DATE,'DD-MM-YYYY')
+            GROUP BY SECURITY_CODE
+            );
+        SELECT MR INTO M_MARVALUE
+        FROM(
+            SELECT MARKET_RATE MR
+            FROM  DN_TRN_MARKET_RATE_EQUI
+            WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=M_LDATE
+            UNION
+            SELECT MARKET_RATE MR
+            FROM DN_TRN_MARKET_RATE_DEBT
+            WHERE SECURITY_CODE=M_SECCODE AND DN_DATE=M_LDATE
+            );
+     END IF;
+
+     RETURN  M_MARVALUE;
+
+END RETURN_MARKET_VAL;
+
+/

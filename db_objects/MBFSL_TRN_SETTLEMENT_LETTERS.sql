@@ -1,0 +1,99 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_TRN_SETTLEMENT_LETTERS
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_TRN_SETTLEMENT_LETTERS" 
+
+   (M_TRANS_LET_NO    IN OUT  DN_TRN_BO_SETTL_TRANS_LETTER.TRANS_LET_NO%TYPE,
+    M_SETTLEMENT              DN_TRN_BO_SETTL_TRANS_LETTER.SETTLE_MODE%TYPE,
+    M_PORTFOLIO_CODE          DN_TRN_BO_SETTL_TRANS_LETTER.PORTFOLIO_CODE%TYPE,
+    M_LIC_BANK_CODE           DN_TRN_BO_SETTL_TRANS_LETTER.LIC_BRANCH_CODE%TYPE,
+    M_LIC_ACCNO               DN_TRN_BO_SETTL_TRANS_LETTER.LIC_ACC_NO%TYPE,
+    --M_ID_PORTCODE             DN_TRN_BO_SETTL_TRANS_LETTER.ID_PORTFOLIO_CODE%TYPE,
+    M_PAYEE_BANK_CODE         DN_TRN_BO_SETTL_TRANS_LETTER.PAYEE_BRANCH_CODE%TYPE,
+    M_PAYEE_ACC_NO            DN_TRN_BO_SETTL_TRANS_LETTER.PAYEE_ACC_NO%TYPE,
+    M_AMT                     DN_TRN_BO_SETTL_TRANS_LETTER.PAY_AMOUNT%TYPE,
+    M_PAYMENT_NO              DN_TRN_BO_SETTL_TRANS_LETTER.PAYMENT_NO%TYPE,
+    M_SUS_REFNO               DN_TRN_BO_SETTL_TRANS_LETTER.SUS_REF_NO%TYPE,
+    M_USER                    DN_TRN_BO_SETTL_TRANS_LETTER.DN_USER%TYPE,
+    M_DUMMY_NO                DN_TRN_BO_SETTL_TRANS_LETTER.TRANS_LET_NO%TYPE
+
+   )
+AS
+BEGIN
+
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_Transfer_Letters');  --added by ashini on 31/10/2005 for sr0509-047
+
+--RAISE_APPLICATION_ERROR(-20201,M_SETTLEMENT||' '||M_PORTFOLIO_CODE||' '||M_LIC_BANK_CODE||' '||M_LIC_ACCNO||' '||M_PAYEE_BANK_CODE||' '|| M_PAYEE_ACC_NO||' '||M_AMT||'  '||M_PAYMENT_NO||' '||M_SUS_REFNO||' '||M_USER);
+
+    /* PROCEDURE  -  SETTLEMENT TRANFER LETTERS
+       SYSTEM     -  DEALNT
+       CREATED BY -  DAYAN.
+       CREATED ON -  15/07/1999 */
+
+    IF M_DUMMY_NO IS NULL THEN
+       SELECT TO_CHAR(SYSDATE,'YY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_SET_TRN_LET.NEXTVAL),3,'0') INTO M_TRANS_LET_NO FROM DUAL;
+       M_TRANS_LET_NO:='STMT'||M_TRANS_LET_NO;
+    ELSE
+       M_TRANS_LET_NO:=M_DUMMY_NO;
+    END IF;
+
+   INSERT INTO DN_TRN_BO_SETTL_TRANS_LETTER
+              (TRANS_LET_NO ,
+               PAYMENT_NO,
+               PORTFOLIO_CODE,
+               SUS_REF_NO,
+               SETTLE_MODE,
+               PAY_AMOUNT,
+               LIC_BRANCH_CODE,
+               LIC_ACC_NO,
+               PAYEE_BRANCH_CODE,
+               PAYEE_ACC_NO,
+               DN_USER,
+               ENTDATE)
+   VALUES
+        ( M_TRANS_LET_NO,
+         M_PAYMENT_NO,
+         M_PORTFOLIO_CODE,
+         M_SUS_REFNO,
+         M_SETTLEMENT,
+         M_AMT,
+         M_LIC_BANK_CODE,
+         M_LIC_ACCNO,
+         M_PAYEE_BANK_CODE,
+         M_PAYEE_ACC_NO,
+         M_USER,
+         SYSDATE );
+
+   UPDATE DN_TRN_BO_SETTL_PAYMENT
+   SET
+      PROCESS_STATUS='Y'
+
+  WHERE
+            PAYMENT_NO=M_PAYMENT_NO AND
+            PORTFOLIO_CODE=M_PORTFOLIO_CODE AND
+            SUS_REF_NO=M_SUS_REFNO AND
+            SETTLE_MODE=M_SETTLEMENT ;
+
+
+             INSERT INTO DN_TIME_LOG_SETTLE
+          (DOC_REF_NO,
+           REL_DEAL_NO,
+           REL_SETTL_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            ( M_TRANS_LET_NO,
+              M_SUS_REFNO,
+              M_PAYMENT_NO,
+              M_USER,
+              SYSDATE,
+              'SETTLEMENT TRANS LETTER');
+
+   COMMIT;
+
+    END MBFSL_TRN_SETTLEMENT_LETTERS;
+
+/

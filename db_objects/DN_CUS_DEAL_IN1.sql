@@ -1,0 +1,268 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_CUS_DEAL_IN1
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_CUS_DEAL_IN1" 
+
+   (    M_DEAL_NO             IN OUT DN_TRN_BO_CUSTODIAL_DEAL.DEAL_NO%TYPE,
+        M_DEAL_TYPE                  DN_TRN_BO_CUSTODIAL_DEAL.DEAL_TYPE%TYPE,
+        M_CUSTODIAL_CODE             DN_TRN_BO_CUSTODIAL_DEAL.CUSTODIAL_CODE%TYPE,
+
+        M_CURR_CODE                  DN_TRN_BO_CUSTODIAL_DEAL.CURR_CODE%TYPE,
+        M_EFF_VALDATE                VARCHAR2,
+        M_EFF_VALDATE_TYPE           DN_TRN_BO_CUSTODIAL_DEAL.EFF_VALDATE_TYPE%TYPE,
+        M_FACE_VALUE                 DN_TRN_BO_CUSTODIAL_DEAL.FACE_VALUE%TYPE,
+
+        M_INST_TYPE                  DN_TRN_BO_CUSTODIAL_DEAL.INST_TYPE%TYPE,
+        M_SECURITY_CODE              DN_TRN_BO_CUSTODIAL_DEAL.SECURITY_CODE%TYPE,
+        M_NO_OF_SETTL_MODES          DN_TRN_BO_CUSTODIAL_DEAL.NO_OF_SETTL_MODES%TYPE,
+        M_FEE_AMOUNT                 DN_TRN_BO_CUSTODIAL_DEAL.FEE_AMOUNT%TYPE,
+        M_DN_USER                    VARCHAR2,
+        M_SERIAL_NO                  DN_TRN_BO_CUSTODIAL_DEAL_SEC.SERIAL_NO%TYPE,
+        M_FVAL                       DN_TRN_BO_CUSTODIAL_DEAL_SEC.FACE_VALUE%TYPE,
+        M_DNO                        VARCHAR2,
+        M_SELECT_TYPE                VARCHAR2,
+
+        M_SETTLE_MODE                DN_TRN_BO_CUSTODIAL_DEAL_SETT.SETTLE_MODE%TYPE,
+        M_SETTLE_AMOUNT              DN_TRN_BO_CUSTODIAL_DEAL_SETT.SETTLE_AMOUNT%TYPE,
+        M_OWN_ACC_NO                 DN_TRN_BO_CUSTODIAL_DEAL_SETT.OWN_ACC_NO%TYPE,
+        M_CUSTODIAL_ACC_NO           DN_TRN_BO_CUSTODIAL_DEAL_SETT.CUSTODIAL_ACC_NO%TYPE,
+        M_SETTLE_COMMENT             DN_TRN_BO_CUSTODIAL_DEAL_SETT.SETTLE_COMMENT%TYPE,
+        M_OWN_BRANCH_CODE            DN_TRN_BO_CUSTODIAL_DEAL_SETT.OWN_BRANCH_CODE%TYPE,
+        M_CUSTODIAL_BRANCH_CODE      DN_TRN_BO_CUSTODIAL_DEAL_SETT.CUSTODIAL_BRANCH_CODE%TYPE,
+        M_INCUSTODY_STATUS           VARCHAR2
+       )
+AS
+ M_DEAL_NUMBER             DN_TRN_BO_CUSTODIAL_DEAL.DEAL_NO%TYPE;
+ M_SCUSTODIAL_CODE         DN_TRN_BO_CUSTODIAL_DEAL.CUSTODIAL_CODE%TYPE;
+
+ BEGIN
+  M_SCUSTODIAL_CODE:=M_CUSTODIAL_CODE;
+/*RAISE_APPLICATION_ERROR(-20201,M_PORTFOLIO_CODE ||' '||M_OWNED_BY_MBFSL||' '||M_CP_PORTFOLIO_CODE||' '||M_PF_NAME||' '||M_ADD_IDENTIFICATION||' '||M_ADD_LOCATION||' '||M_ADD_STREET||' '||M_ADD_CITY||' '||M_ADD_COUNTRY||' ' ||M_POSTAL_CODE||' '||M_DATE_INC_BIRTH||' '||M_BUSI_REG_NIC||' '||M_CATEGORY_ENTITY||' '||M_NATURE_OCCUPATION ||' '||M_SECT_CODE ||' '||M_MBFSL_SECT_CODE||' '||M_NEST_REVIEW );*/
+
+
+    /* PROCEDURE  - TO SAVE INSTRUMENT OPTIONS
+       SYSTEM     -  DEALNET
+       CREATED BY -
+       CREATED ON -  */
+
+  IF M_DEAL_NO IS NULL THEN
+       SELECT
+         'CS'||TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_CUSTODIAL_DEAL.NEXTVAL),3,'0')
+       INTO
+         M_DEAL_NO
+       FROM
+         DUAL;
+
+   END IF;
+
+
+IF M_DEAL_NO IS NOT NULL  AND M_SELECT_TYPE='MAIN1' THEN
+ UPDATE DN_TRN_BO_CUSTODIAL_DEAL
+       SET DEAL_TYPE             =M_DEAL_TYPE,
+           CUSTODIAL_CODE        =M_CUSTODIAL_CODE,
+           CURR_CODE             =M_CURR_CODE,
+           EFF_VALDATE           =TO_DATE(M_EFF_VALDATE,'DD/MM/YYYY'),
+           EFF_VALDATE_TYPE      =M_EFF_VALDATE_TYPE,
+           FACE_VALUE            =M_FACE_VALUE,
+           INST_TYPE             =M_INST_TYPE,
+           SECURITY_CODE         =M_SECURITY_CODE,
+           NO_OF_SETTL_MODES     =M_NO_OF_SETTL_MODES,
+           FEE_AMOUNT            =M_FEE_AMOUNT,
+           DN_USER               =M_DN_USER,
+           INCUSTODY_STATUS    =M_INCUSTODY_STATUS
+
+         WHERE
+           DEAL_NO=M_DEAL_NO ;
+
+      IF SQL%NOTFOUND THEN
+/*RAISE_APPLICATION_ERROR(-20201,M_PORTFOLIO_CODE ||' '||M_OWNED_BY_MBFSL||' '||M_CP_PORTFOLIO_CODE||' '||M_PF_NAME||' '||M_ADD_IDENTIFICATION||' '||M_ADD_LOCATION||' '||M_ADD_STREET||' '||M_ADD_CITY||' '||M_ADD_COUNTRY||' ' ||M_POSTAL_CODE||' '||TO_DATE(M_DATE_INC_BIRTH,'DD/MM/YYYY')||' '||M_BUSI_REG_NIC||' '||M_CATEGORY_ENTITY||' '||M_NATURE_OCCUPATION ||' '||M_SECT_CODE ||' '||M_MBFSL_SECT_CODE||' '||TO_DATE(M_NEST_REVIEW,'DD/MM/YYYY')||' '||0||' '||0);*/
+
+     INSERT INTO DN_TRN_BO_CUSTODIAL_DEAL
+        (DEAL_NO,
+         DEAL_TYPE,
+         CUSTODIAL_CODE,
+         CURR_CODE,
+         EFF_VALDATE,
+         EFF_VALDATE_TYPE,
+         FACE_VALUE,
+         INST_TYPE,
+         SECURITY_CODE,
+         NO_OF_SETTL_MODES,
+         FEE_AMOUNT,
+         DN_USER,INCUSTODY_STATUS)
+         VALUES(
+           M_DEAL_NO,
+           M_DEAL_TYPE,
+           M_CUSTODIAL_CODE,
+           M_CURR_CODE,
+           TO_DATE(M_EFF_VALDATE,'DD/MM/YYYY'),
+           M_EFF_VALDATE_TYPE,
+           M_FACE_VALUE,
+           M_INST_TYPE,
+           M_SECURITY_CODE,
+           M_NO_OF_SETTL_MODES,
+           M_FEE_AMOUNT,
+           M_DN_USER,M_INCUSTODY_STATUS
+           );
+        END IF;
+  END IF;
+
+
+ IF M_DEAL_NO IS NOT NULL  AND M_SELECT_TYPE='MAIN2' AND M_SERIAL_NO IS NOT NULL THEN
+
+       UPDATE DN_TRN_BO_CUSTODIAL_DEAL_SEC
+       SET FACE_VALUE            =M_FACE_VALUE
+           WHERE
+               DEAL_NO        =M_DEAL_NO
+           AND SECURITY_CODE  =M_SECURITY_CODE
+           AND SERIAL_NO      =M_SERIAL_NO;
+
+   IF SQL%NOTFOUND THEN
+      INSERT INTO DN_TRN_BO_CUSTODIAL_DEAL_SEC
+             (DEAL_NO,
+              SECURITY_CODE,
+              SERIAL_NO,
+              FACE_VALUE)
+                 VALUES(
+                   M_DEAL_NO,
+                   M_SECURITY_CODE,
+                   M_SERIAL_NO,
+                   M_FVAL
+                   );
+   END IF;
+  END IF;
+
+
+ IF M_DEAL_NO IS NOT NULL AND M_SELECT_TYPE='MAIN3' AND M_SETTLE_AMOUNT IS NOT NULL THEN
+
+
+ -- RAISE_APPLICATION_ERROR(-20201,M_SETTLE_MODE ||' '||M_SETTLE_AMOUNT||' '||M_OWN_ACC_NO||' '||M_SCUSTODIAL_CODE||' '||M_CUSTODIAL_ACC_NO||''|| M_SETTLE_COMMENT);
+
+  UPDATE DN_TRN_BO_CUSTODIAL_DEAL_SETT
+       SET SETTLE_AMOUNT          =M_SETTLE_AMOUNT,
+           OWN_ACC_NO             =M_OWN_ACC_NO,
+           CUSTODIAL_CODE         =M_SCUSTODIAL_CODE,
+           CUSTODIAL_ACC_NO       =M_CUSTODIAL_ACC_NO,
+           OWN_BRANCH_CODE        =M_OWN_BRANCH_CODE,
+           CUSTODIAL_BRANCH_CODE  =M_CUSTODIAL_BRANCH_CODE,
+           SETTLE_COMMENT         =M_SETTLE_COMMENT
+           WHERE
+               DEAL_NO        =M_DEAL_NO
+           AND SETTLE_MODE    =M_SETTLE_MODE;
+
+   IF SQL%NOTFOUND THEN
+  --RAISE_APPLICATION_ERROR(-20201,M_SETTLE_MODE ||' '||M_SETTLE_AMOUNT||' '||M_DEAL_NO||''||OWN_ACC_NO);
+
+      INSERT INTO DN_TRN_BO_CUSTODIAL_DEAL_SETT
+              (DEAL_NO,
+              SETTLE_MODE,
+              SETTLE_AMOUNT,
+              OWN_ACC_NO,
+              CUSTODIAL_CODE,
+              CUSTODIAL_ACC_NO,
+              OWN_BRANCH_CODE,
+              CUSTODIAL_BRANCH_CODE,
+              SETTLE_COMMENT)
+                 VALUES(
+                   M_DEAL_NO,
+                   M_SETTLE_MODE,
+                   M_SETTLE_AMOUNT,
+                   M_OWN_ACC_NO,
+                   M_SCUSTODIAL_CODE,
+                   M_CUSTODIAL_ACC_NO,
+                   M_OWN_BRANCH_CODE,
+                   M_CUSTODIAL_BRANCH_CODE,
+                   M_SETTLE_COMMENT
+                   );
+ END IF;
+  END IF;
+
+-----------
+
+IF M_DEAL_NO IS NOT NULL  AND  M_DNO ='MAINW'  AND M_SELECT_TYPE='MAINN' THEN
+ UPDATE DN_TRN_BO_CUSTODIAL_DEAL
+       SET
+           CUSTODIAL_CODE        =M_CUSTODIAL_CODE,
+           CURR_CODE             =M_CURR_CODE,
+           EFF_VALDATE           =TO_DATE(M_EFF_VALDATE,'DD/MM/YYYY'),
+           EFF_VALDATE_TYPE      =M_EFF_VALDATE_TYPE,
+           FACE_VALUE            =M_FACE_VALUE,
+           INST_TYPE             =M_INST_TYPE,
+           SECURITY_CODE         =M_SECURITY_CODE,
+           DN_USER               =M_DN_USER,
+           INCUSTODY_STATUS      =M_INCUSTODY_STATUS
+
+         WHERE
+           DEAL_NO    =M_DEAL_NO
+           AND
+           DEAL_TYPE  =M_DEAL_TYPE;
+
+      IF SQL%NOTFOUND THEN
+/*RAISE_APPLICATION_ERROR(-20201,M_PORTFOLIO_CODE ||' '||M_OWNED_BY_MBFSL||' '||M_CP_PORTFOLIO_CODE||' '||M_PF_NAME||' '||M_ADD_IDENTIFICATION||' '||M_ADD_LOCATION||' '||M_ADD_STREET||' '||M_ADD_CITY||' '||M_ADD_COUNTRY||' ' ||M_POSTAL_CODE||' '||TO_DATE(M_DATE_INC_BIRTH,'DD/MM/YYYY')||' '||M_BUSI_REG_NIC||' '||M_CATEGORY_ENTITY||' '||M_NATURE_OCCUPATION ||' '||M_SECT_CODE ||' '||M_MBFSL_SECT_CODE||' '||TO_DATE(M_NEST_REVIEW,'DD/MM/YYYY')||' '||0||' '||0);*/
+
+     INSERT INTO DN_TRN_BO_CUSTODIAL_DEAL
+        (DEAL_NO,
+         DEAL_TYPE,
+         CUSTODIAL_CODE,
+         CURR_CODE,
+         EFF_VALDATE,
+         EFF_VALDATE_TYPE,
+         FACE_VALUE,
+         INST_TYPE,
+         SECURITY_CODE,
+         NO_OF_SETTL_MODES,
+         FEE_AMOUNT,
+         DN_USER,INCUSTODY_STATUS)
+         VALUES(
+           M_DEAL_NO,
+           M_DEAL_TYPE,
+           M_CUSTODIAL_CODE,
+           M_CURR_CODE,
+           TO_DATE(M_EFF_VALDATE,'DD/MM/YYYY'),
+           M_EFF_VALDATE_TYPE,
+           M_FACE_VALUE,
+           M_INST_TYPE,
+           M_SECURITY_CODE,
+           0,
+           0,
+           M_DN_USER,M_INCUSTODY_STATUS
+           );
+        END IF;
+  END IF;
+
+
+
+IF M_DEAL_NO IS NOT NULL  AND M_SELECT_TYPE='MINN1' AND M_SERIAL_NO IS NOT NULL AND  M_DNO ='MW' THEN
+ --  RAISE_APPLICATION_ERROR(-20201,M_DEAL_NO ||' '||M_SECURITY_CODE||' '||M_SERIAL_NO||''||M_FACE_VALUE);
+
+       UPDATE DN_TRN_BO_CUSTODIAL_DEAL_SEC
+       SET FACE_VALUE            =M_FVAL  --earlier M_FACE_VALUE---
+           WHERE
+               DEAL_NO        =M_DEAL_NO
+           AND SECURITY_CODE  =M_SECURITY_CODE
+           AND SERIAL_NO      =M_SERIAL_NO;
+
+   IF SQL%NOTFOUND THEN
+
+      INSERT INTO DN_TRN_BO_CUSTODIAL_DEAL_SEC
+             (DEAL_NO,
+              SECURITY_CODE,
+              SERIAL_NO,
+              FACE_VALUE)
+                 VALUES(
+                   M_DEAL_NO,
+                   M_SECURITY_CODE,
+                   M_SERIAL_NO,
+                   M_FVAL
+                   );
+   END IF;
+  END IF;
+
+ COMMIT;
+
+
+END DN_CUS_DEAL_IN1;
+
+/

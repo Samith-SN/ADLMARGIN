@@ -1,0 +1,97 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_USER_CONF
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_USER_CONF" 
+   (
+   M_DN_USER            DN_REF_USER.DN_USER%TYPE,
+   M_ACTIVE_STATUS      DN_REF_USER.ACTIVE_STATUS%TYPE,
+   M_USER               DN_REF_USER.DN_USER%TYPE
+   )
+AS
+M_NUMBER VARCHAR(100);
+MAIN_CUR          INTEGER;
+IGNORE            INTEGER;
+USER_COUNT    INTEGER;
+
+BEGIN
+
+-- DN_VALIDATE_SAVE_RIGHTS(M_CHANGE_USER,'WD_LOCK_USER'); -- udara
+
+
+  -- DN_REF_PORT_BACKUP(M_PORTFOLIO_CODE,M_USER);
+   
+   if M_ACTIVE_STATUS='E'  then
+           
+         UPDATE DN_REF_USER
+         SET   ACTIVE_STATUS = 'Y'
+         WHERE  DN_USER=UPPER(M_DN_USER);
+         
+ INSERT INTO dn_doc_status_log( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+ VALUES(UPPER(M_DN_USER),'USER_CONFIRMATION','Y',M_USER,SYSDATE,'ENTERED USER CONFIRMATION');
+      
+     elsif  M_ACTIVE_STATUS='M' then
+           
+         UPDATE DN_REF_USER
+         SET   ACTIVE_STATUS = 'Y'
+         WHERE  DN_USER=UPPER(M_DN_USER);
+         
+ INSERT INTO dn_doc_status_log( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+ VALUES(UPPER(M_DN_USER),'USER_CONFIRMATION','Y',M_USER,SYSDATE,'MODIFIED USER CONFIRMATION');  
+      
+           
+   elsif M_ACTIVE_STATUS='A' then
+   
+         UPDATE DN_REF_USER
+         SET   ACTIVE_STATUS = 'Y'
+         WHERE  DN_USER=UPPER(M_DN_USER);
+         
+ INSERT INTO dn_doc_status_log( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+ VALUES(UPPER(M_DN_USER),'USER_CONFIRMATION','Y',M_USER,SYSDATE,'ACTIVED USER CONFIRMATION');  
+           
+   elsif M_ACTIVE_STATUS='D' then
+          
+         UPDATE DN_REF_USER
+         SET   ACTIVE_STATUS = 'N'
+         WHERE  DN_USER=UPPER(M_DN_USER);
+         
+ INSERT INTO dn_doc_status_log( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+ VALUES(UPPER(M_DN_USER),'USER_CONFIRMATION','Y',M_USER,SYSDATE,'DEACTIVED USER CONFIRMATION');  
+ 
+ 
+    -- added by Udara on 23-05-2011
+    elsif M_ACTIVE_STATUS='C' then
+    
+        SELECT COUNT(*) INTO USER_COUNT
+        FROM ALL_USERS
+        WHERE USERNAME = M_DN_USER;
+    
+        IF USER_COUNT > 0 THEN
+            MAIN_CUR:=DBMS_SQL.OPEN_CURSOR;
+            DBMS_SQL.PARSE(MAIN_CUR,
+            'ALTER USER '||UPPER(M_DN_USER)||' ACCOUNT LOCK',DBMS_SQL.V7);
+            IGNORE:=DBMS_SQL.EXECUTE(MAIN_CUR);
+       END IF;
+        
+        
+    
+         UPDATE DN_REF_USER
+         SET   ACTIVE_STATUS = 'T'
+         WHERE  DN_USER=UPPER(M_DN_USER);
+         
+    INSERT INTO dn_doc_status_log( DOC_REF_NO,DOC_TYPE,DOC_STATUS,DN_USER,ENT_DATE,DESCRIPTION)
+    VALUES(UPPER(M_DN_USER),'USER_CONFIRMATION','Y',M_USER,SYSDATE,'USER TERMINATION'); 
+    
+    
+    -- end by Udara on 23-05-2011
+        
+    END IF;      
+
+COMMIT;
+
+
+
+END;
+
+/

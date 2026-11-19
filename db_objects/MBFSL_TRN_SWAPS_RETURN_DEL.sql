@@ -1,0 +1,30 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_TRN_SWAPS_RETURN_DEL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_TRN_SWAPS_RETURN_DEL" 
+   (M_DEALNO           DN_TRN_SWAP_RETURNABLE.DEAL_NO%TYPE
+   )
+AS
+
+
+BEGIN
+
+    /* PROCEDURE  -  SWAPS RETURNABLE DELETE
+       SYSTEM     -  DEALNET
+       CREATED BY -  DAYAN
+       CREATED ON -  02/08/1999 */
+--RAISE_APPLICATION_ERROR(-20201,M_DEALNO);
+
+   UPDATE DN_TRN_SWAP_RETURNABLE
+   SET
+         APP_STATUS='CANCEL'
+   WHERE M_DEALNO=DEAL_NO;
+
+
+COMMIT;
+
+END MBFSL_TRN_SWAPS_RETURN_DEL;
+
+/

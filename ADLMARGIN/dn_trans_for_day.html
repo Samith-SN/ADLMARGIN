@@ -1,0 +1,353 @@
+<HTML>
+	<HEAD>
+		<TITLE>MFactor</TITLE>
+		<STYLE>
+			BODY 								{ background-color: silver;color: yellow; font: 10pt 
+			sans-serif; }
+			LI 									{ cursor: hand; }
+			UL 									{ display: none;font: 18pt; }
+			UL.showList					{ display: block; }
+			.defaultStyles UL		{ color: gold; }
+			UL.defaultStyles LI	{ display: none; }
+		</STYLE>
+	</HEAD>   
+		<SCRIPT language="JavaScript"> 	     
+		
+			function chk_validity(){
+			if((parseInt(document.Form1.TXT_DATE_FROM.value))>=(parseInt(document.Form1.TXT_DATE_TO.value))){
+				if((parseInt(document.Form1.TXT_MONTH_FROM.value))<=(parseInt(document.Form1.TXT_MONTH_TO.value))){
+				  if((parseInt(document.Form1.TXT_YEAR_FROM.value))<=(parseInt(document.Form1.TXT_YEAR_TO.value))){
+						if(((parseInt(document.Form1.TXT_DATE_FROM.value))==(parseInt(document.Form1.TXT_DATE_TO.value)))&&
+						((parseInt(document.Form1.TXT_MONTH_FROM.value))==(parseInt(document.Form1.TXT_MONTH_TO.value)))&&
+						((parseInt(document.Form1.TXT_YEAR_FROM.value))==(parseInt(document.Form1.TXT_YEAR_TO.value)))){
+						}
+						else if(((parseInt(document.Form1.TXT_DATE_FROM.value))>(parseInt(document.Form1.TXT_DATE_TO.value)))&&
+						((parseInt(document.Form1.TXT_MONTH_FROM.value))==(parseInt(document.Form1.TXT_MONTH_TO.value)))&&
+						((parseInt(document.Form1.TXT_YEAR_FROM.value))==(parseInt(document.Form1.TXT_YEAR_TO.value)))){
+			         alert("'To Date' should be greater than 'From Date'");
+	          }
+					}
+					else{
+						alert("'To Date' should be greater than 'From Date'");
+					}
+			  }
+				else{
+				   if((parseInt(document.Form1.TXT_YEAR_FROM.value))>=(parseInt(document.Form1.TXT_YEAR_TO.value))){
+				     alert("'To Date' should be greater than 'From Date'");
+				   }
+					 else{
+					 }	
+				}
+			}
+			else{
+				if((parseInt(document.Form1.TXT_MONTH_FROM.value))<=(parseInt(document.Form1.TXT_MONTH_TO.value))){
+				  if((document.Form1.TXT_YEAR_FROM.value)<=(document.Form1.TXT_YEAR_TO.value)){
+					}
+					else{
+					  alert("'To Date' should be greater than 'From Date'");
+					}
+				}
+				else{
+				   if((parseInt(document.Form1.TXT_YEAR_FROM.value))<(parseInt(document.Form1.TXT_YEAR_TO.value))){
+			     }
+					 else{
+						alert("'To Date' should be greater than 'From Date'");
+					 }
+			  }
+			}
+	 }
+			
+			
+			
+			
+		  	function chkstartdate(dayobj,monthobj,yearobj) {
+		    checkMonthLength(dayobj,monthobj,yearobj);		
+			}
+
+		
+		function displaydata(){
+			sclient  = new String(document.Form1.TXT_CLIENT.value);	
+			if ((sclient.length == 0)||(sclient == " ")){
+			sclient="ALL";
+			}
+			
+			if(document.Form1.INV_TYPE.value=="OR"){
+			
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_or";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+		  } 
+  	  else if(document.Form1.INV_TYPE.value=="RF"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_rf";
+			popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="RR"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_rr";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="RS"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_rs";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="BF"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_bf";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="BS"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_bs";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="SR"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_sr";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+  	  else if(document.Form1.INV_TYPE.value=="SO"){
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"boffice_reports?&mdate_from="+document.Form1.TXT_DATE_FROM.value+'-'+document.Form1.TXT_MONTH_FROM.value+'-'+document.Form1.TXT_YEAR_FROM.value+"&mdate_to="+document.Form1.TXT_DATE_TO.value+'-'+document.Form1.TXT_MONTH_TO.value+'-'+document.Form1.TXT_YEAR_TO.value+"&TXT_client="+sclient+"&chksql=mrep_data_so";
+	    popupwin2 = window.open(m_url,'displayWindow2','left=0,top=160,width=799,height=360,toolbar=0,location=0,directories=0,status=0,menuBar=1,scrollBars=1,resizable=1');
+		  popupwin2.focus();
+			}
+	}
+	
+		function change_head(){
+			if(document.Form1.INV_TYPE.value=="OR"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Outrights</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="RF"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Repos Fresh</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="RR"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Repos Rollover</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="RS"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Repos Full Settlement</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="BF"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Borrow/Lend Funds</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="BS"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Borrow/Lend Securities</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="SR"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Securities Swaps Returnable</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+			else if(document.Form1.INV_TYPE.value=="SO"){
+		    m_writedata ='<TD WIDTH="50%" STYLE="{color: white ;font: bold 10pt arial;text-align:right;}"'+
+				'<B>Reports - Transactions-Securities Swaps Outright</B></TD>'; 
+				parent.frames[0].scrname.innerHTML=m_writedata;	
+		   }	
+		}	
+		
+		
+		
+		function myDialogObj() {
+			var htmlstr; 
+			var returnval;
+	 	}
+			
+		
+
+    function MyDialog(){
+	 	 this.valout   = new Array(10);
+	 		}		
+		
+		 function Client_help(){
+		 document.Form1.hid_help_type.value="1";
+	   m_sql = "m_portfoliosql";
+	   m_criteria = document.Form1.TXT_CLIENT.value+"@";
+	   HelpBox('1','10','0');
+	  }
+	 
+				
+   
+	 
+		
+		function HelpBox(Start,End,Hid_No) {
+		oBj = new MyDialog();
+	  oBj.valout[1]  = " ";
+		oBj.valout[2]  = " ";
+		oBj.valout[3]  = " ";
+		popupwin = window.showModalDialog(""+servlet_client_url+":"+client_t3_port+"/"+client_name+"mbfsl_fund_Help_Servlet?class_in="+client_name+"mbfsl_fund_help_select"+
+									"&Sql_in="+m_sql+"&Start_in="+Start+
+									"&End_in="+End+"&Crit_In="+m_criteria+
+									"&Hid_No="+Hid_No+"", oBj,"dialogWidth:25em; dialogHeight:18em; center:yes;  status:no");
+									
+	
+	
+if(document.Form1.hid_help_type.value=="1"){
+		  if(oBj.valout[1] !=" "){
+		     if(oBj.valout[1] !='Close'){
+			     if(oBj.valout[1]!="Prev"){
+				      if(oBj.valout[1]!="Next"){
+				      // alert("uu");
+								asign_port_code();
+		          }
+		          else{//alert("HI");
+							     //alert("hi"+oBj.valout[2]+"hi"+oBj.valout[3]);
+		            Next(oBj.valout[2],oBj.valout[3],Hid_No);
+		 	          return false;
+		          } 
+	         }
+	         else{
+		         Prev(oBj.valout[2],oBj.valout[3],Hid_No);
+	         }	
+         }		
+         else{	
+	         document.Form1.TXT_CLIENT.value="";	
+         }		
+    }
+    else{		
+	    document.Form1.TXT_CLIENT.value="";	
+    }		
+ }
+
+	}
+	
+function Prev(Start,End,Hid_No){
+	 HelpBox(Start,End,Hid_No)
+}
+function Next (Start,End,Hid_No){
+	 HelpBox(Start,End,Hid_No)
+}
+	
+	function asign_port_code() {	
+	 document.Form1.TXT_CLIENT.value=oBj.valout[2];
+	}
+			
+			
+			
+			
+			
+			
+			
+		
+
+		 /*
+			function Client_help(){
+			//m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"mbfsl_reports_TransactionLst?chksql=portfolio_help&portfolio_code="+document.Form1.TXT_CLIENT.value;
+				m_sql = "m_portfoliosql";
+				m_criteria = document.Form1.TXT_CLIENT.value+"@";
+				HelpType="simple_help";
+			m_url=servlet_client_url+":"+client_t3_port+"/"+client_name+"mbfsl_Help_Servlet?class_in=mbfsl_help_select"+
+			"&Sql_in="+m_sql+"&Start_in=0&End_in=0&Crit_In="+m_criteria+"&Hid_No=0&HelpType=simple_help";
+			top.frames[0].document.applets[0].getdata(m_url);
+			m_size=top.frames[0].document.applets[0].outvec_value.size();
+			vec_pos=0;
+			m_row="";
+			lineno=1;
+			 while (vec_pos <m_size-1) {
+				m_port=top.frames[0].document.applets[0].outvec_value.elementAt(vec_pos);
+				m_Des=top.frames[0].document.applets[0].outvec_value.elementAt(vec_pos+1);
+				m_row=m_row+'<TR STYLE="{color:black; cursor:hand font: bold 9pt Arial;}" ID=LINE'+	lineno+' BGCOLOR="white" ONMOUSEOVER=mouseover_setings(LINE'+lineno+'); ONMOUSEOUT=mouseout_setings(LINE'+lineno+'); onClick=close_help(C1R'+lineno+');><TD ID=C1R'+lineno+'>'+
+				'<B>'+m_port+'</B></TD><TD ID=C2R'+lineno+'><B>'+m_Des+'</B></TD></TR>';
+				vec_pos=vec_pos+2;
+				lineno=lineno+1;
+		       }
+			
+			m_writedata ='<TABLE BGCOLOR="gray" WIDTH="100%" STYLE="{color:black; font: bold 9pt Arial;}">'+
+			'<TR BGCOLOR="silver"><TD WIDTH="15%"><B>Portfolio Code</B></TD>' +
+		  '<TD WIDTH="85%"><B>Name</B></TD></TR>'+
+			m_row+
+			'</TABLE>'; 
+			myDialogObj.htmlstr = m_writedata;
+			myDialogObj.returnval = "";
+			popupwin = window.showModalDialog(html_client_url+"/help_box2.html",myDialogObj,"dialogWidth:20em; dialogHeight:15em; center:yes; resizable:yes; status:no");
+			document.Form1.TXT_CLIENT.value=myDialogObj.returnval;
+			document.Form1.TXT_CLIENT.focus();
+	}*/
+	
+	
+	
+	
+	
+	</SCRIPT>
+	<BODY>
+		<FORM NAME="Form1" METHOD="POST" >
+			<INPUT TYPE="Hidden" NAME="Hid_scr_name"	VALUE="reveryfication">
+					<INPUT TYPE="Hidden" NAME="hid_help_type"	VALUE="">
+			<TABLE WidTH="100%"BORDER="0" CELLPADDING="0" CELLSPACING="0" STYLE="{color: black; font: bold 9pt arial;}">							
+				<TD WidTH="1%">
+					<TD WidTH="99%">
+						<TABLE WIDTH="100%"BORDER="0" CELLPADDING="0" CELLSPACING="0" STYLE="{color: black; font: bold 9pt arial;}">
+							<TR><BR></TR>
+      				<TR>
+							<TD WIDTH="12%">Deal Type</TD>  
+							<TD WIDTH="90%">	 	
+							<SELECT NAME="INV_TYPE" STYLE="{color: black; font: 10pt arial;}" ONCHANGE="change_head()">
+							<OPTION VALUE="OR" SELECTED>Outrights</option> 
+							<OPTION VALUE="RF">Borrowings</option>    
+						  <OPTION VALUE="RR">Lendings</option> 
+							<OPTION VALUE="RS">Settlements</option>    
+						  <!--OPTION VALUE="BF">Borrow / Lend - Funds</option> 
+							<OPTION VALUE="BS">Borrow / Lend - Securities</option-->    
+						 <!--OPTION VALUE="SR">Securities Swaps - Returnable</option> 
+							<OPTION VALUE="SO">Securities Swaps - Outright</option--> 
+		         </SELECT>    
+		         </TD>  
+		          <!--TD WIDTH="12%">Date</TD> 
+							 <TD WIDTH="30%"><INPUT TYPE="Text" NAME="TXT_DATE" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_MONTH" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_YEAR" SIZE=5 MAXLENGTH=4 ONBLUR="chkstartdate(document.Form1.TXT_DATE,document.Form1.TXT_MONTH,document.Form1.TXT_YEAR)"> 								
+			        </TD> 
+			        <TD></TD>								
+							<TD WIDTH="16%" align="absmiddle"><img STYLE="{cursor:hand;}" src='go.gif' ONCLICK="displaydata()"></TD>
+							</TR> 
+							</TABLE-->  
+							<TABLE WIDTH="100%"BORDER="0" CELLPADDING="0" CELLSPACING="0" STYLE="{color: black; font: bold 9pt arial;}">
+							<TR><BR></TR>
+      				<TR>
+						  <TD WIDTH="12%">From Date</TD> 
+							<TD WIDTH="19%"><INPUT TYPE="Text" NAME="TXT_DATE_FROM" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_MONTH_FROM" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_YEAR_FROM" SIZE=5 MAXLENGTH=4 ONBLUR="chkstartdate(document.Form1.TXT_DATE_FROM,document.Form1.TXT_MONTH_FROM,document.Form1.TXT_YEAR_FROM)"> 								
+			        </TD> 
+							<TD WIDTH="7%">To Date</TD> 
+							<TD WIDTH="19%"><INPUT TYPE="Text" NAME="TXT_DATE_TO" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_MONTH_TO" SIZE=3 MAXLENGTH=2>
+			        <INPUT TYPE="Text" NAME="TXT_YEAR_TO" SIZE=5 MAXLENGTH=4 ONBLUR="chkstartdate(document.Form1.TXT_DATE_TO,document.Form1.TXT_MONTH_TO,document.Form1.TXT_YEAR_TO);chk_validity()"> 								
+			        </TD> 
+							<TD WIDTH="5%">Client</TD> 
+							<TD WIDTH="18%"><INPUT TYPE="Text" NAME="TXT_CLIENT" SIZE=10  >
+			        <!--<INPUT TYPE="BUTTON" NAME="but_CLIENT" value="  ?  " ONCLICK=""> 								-->
+							
+							<INPUT TYPE="BUTTON" NAME="but_CLIENT" value="  ?  " STYLE="{cursor:hand; color: black; font: bold 10pt arial;border-style: outset;background-color: darkgray; }" ONCLICK="Client_help()"> 								
+			       
+							</TD> 
+					    <!--TD WIDTH="6%"><INPUT TYPE="button" VALUE=" GO " NAME="BUT_BCODE" ONCLICK="displaydata()" STYLE="{cursor:hand; color: green; font: bold 8pt arial;}"></TD-->
+							<TD WIDTH="*%" align="absmiddle"><img STYLE="{cursor:hand;}" src='go.gif' ONCLICK="displaydata()"></TD>
+							</TR> 
+							</TABLE>
+						<TABLE width="100%" BORDER="0" CELLPADDING="2" CELLSPACING="1" STYLE="{color: black; font: 10pt sans-serif;}">
+						</TABLE>
+						<INPUT TYPE="Hidden" NAME="Hid_rows" >
+						<DIV id=clientmgr></DIV>
+						
+					</TD>
+				</TD>
+			</TABLE> 
+		</FORM>
+	</BODY>
+	<DIV>
+		<SCRIPT language1.2="JavaScript" src="validate.js"></SCRIPT>
+	</DIV>
+	</html>
+		

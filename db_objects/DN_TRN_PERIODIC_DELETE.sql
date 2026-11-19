@@ -1,0 +1,35 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_TRN_PERIODIC_DELETE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_TRN_PERIODIC_DELETE" 
+   (M_DEALNO           DN_TRN_REPO_PERIOD_INT.DEAL_NO%TYPE
+   )
+AS
+
+
+BEGIN
+
+    /* PROCEDURE  -  REPO FRESH DEAL_DELETE
+       SYSTEM     -  DEALNET
+       CREATED BY -  DAYAN
+       CREATED ON -  23/07/1999 */
+
+
+--RAISE_APPLICATION_ERROR(-20201,M_DEALNO);
+   DELETE DN_REF_RP_INST_PAY_FREQ
+   WHERE DEAL_NO = M_DEALNO;
+
+
+   UPDATE DN_TRN_REPO_PERIOD_INT
+   SET
+         APP_STATUS='CANCEL'
+   WHERE M_DEALNO=DEAL_NO;
+
+
+COMMIT;
+
+END DN_TRN_PERIODIC_DELETE;
+
+/

@@ -1,0 +1,65 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_TRN_SETTLEMENT_CHEQ_MOD
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_TRN_SETTLEMENT_CHEQ_MOD" 
+   (M_CHQ_PAY_NO                DN_TRN_BO_SETTL_CHQ_PAYMENT.CHQ_PAY_NO%TYPE,
+    M_PAYMENT_NO                DN_TRN_BO_SETTL_CHQ_PAYMENT.PAYMENT_NO%TYPE,
+    M_CHQ_NO                    DN_TRN_BO_SETTL_CHQ_PAYMENT.CHQ_NO%TYPE,
+    M_PAY_REF_NO                DN_TRN_BO_SETTL_CHQ_PAYMENT.PAY_REF_NO%TYPE,
+    M_USER                      DN_TRN_BO_SETTL_CHQ_PAYMENT.DN_USER%TYPE
+   )
+AS
+ 
+err_num    varchar2(200);
+err_msg    varchar2(200);
+M_SEQ_NO   VARCHAR2(20);
+ 
+BEGIN
+ 
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_Cheques');
+ 
+    /* PURPOSE  -  CHANGE CHEQUE NUMBER
+       SYSTEM     -  DEALNET
+       CREATED BY -  YOHAN.
+       CREATED ON -  09-03-2006 */
+ 
+
+    INSERT INTO DN_TRN_BO_SETTL_CHQ_PAY_BKUP
+ 
+             (CHQ_PAY_NO,PAYMENT_NO,PORTFOLIO_CODE,SUS_REF_NO,SETTLE_MODE, BRANCH_CODE,ACC_NO,
+              CHQ_NO,CHQ_AMOUNT,PAY_REF_NO,DN_USER,ENTDATE,MOD_USER,MOD_DATE)
+   (SELECT
+              CHQ_PAY_NO,PAYMENT_NO,PORTFOLIO_CODE,SUS_REF_NO,SETTLE_MODE,BRANCH_CODE,ACC_NO,
+              CHQ_NO,CHQ_AMOUNT,PAY_REF_NO,DN_USER,ENTDATE,M_USER ,SYSDATE
+   FROM
+              DN_TRN_BO_SETTL_CHQ_PAYMENT
+   WHERE
+              CHQ_PAY_NO=M_CHQ_PAY_NO );
+ 
+
+   UPDATE DN_TRN_BO_SETTL_CHQ_PAYMENT
+    SET
+        CHQ_NO=M_CHQ_NO,
+        PAY_REF_NO=M_PAY_REF_NO,
+        DN_USER=M_USER,
+        ENTDATE=SYSDATE
+ 
+    WHERE
+        CHQ_PAY_NO=M_CHQ_PAY_NO AND
+        PAYMENT_NO=M_PAYMENT_NO ;
+ 
+     COMMIT;
+ 
+     EXCEPTION
+       WHEN OTHERS THEN
+         ROLLBACK;
+           err_num :=  substr(SQLCODE,1,15);
+           err_msg := substr(SQLERRM,1,200) ;
+           COMMIT;
+      RAISE_APPLICATION_ERROR(-20201,'ERROR !! '||SQLCODE||SQLERRM);
+ 
+    END MBFSL_TRN_SETTLEMENT_CHEQ_MOD;
+
+/

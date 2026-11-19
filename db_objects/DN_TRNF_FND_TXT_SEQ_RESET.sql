@@ -1,0 +1,33 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_TRNF_FND_TXT_SEQ_RESET
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_TRNF_FND_TXT_SEQ_RESET" (
+M_SCRNAME                       VARCHAR2 )
+AS
+
+  MAIN_CUR          INTEGER;
+  IGNORE            INTEGER;
+
+BEGIN
+
+   MAIN_CUR:=SYS.DBMS_SQL.OPEN_CURSOR;
+
+   --Drop Sequences
+
+   SYS.DBMS_SQL.PARSE(MAIN_CUR,'DROP SEQUENCE DN_TRNF_FND_TXT_SEQ' ,SYS.DBMS_SQL.V7);
+   IGNORE:=SYS.DBMS_SQL.EXECUTE(MAIN_CUR);
+
+  
+   --Create Sequences
+
+   SYS.DBMS_SQL.PARSE(MAIN_CUR,'CREATE SEQUENCE DN_TRNF_FND_TXT_SEQ INCREMENT BY 1 START WITH 75000  '||
+   'MINVALUE 0 MAXVALUE 99999 NOCYCLE ORDER NOCACHE',SYS.DBMS_SQL.V7);
+   IGNORE:=SYS.DBMS_SQL.EXECUTE(MAIN_CUR);
+
+
+   SYS.DBMS_SQL.CLOSE_CURSOR(MAIN_CUR);
+END; -- Procedure
+
+/

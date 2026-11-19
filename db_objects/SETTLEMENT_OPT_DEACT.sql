@@ -1,0 +1,34 @@
+--------------------------------------------------------
+--  DDL for Procedure SETTLEMENT_OPT_DEACT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."SETTLEMENT_OPT_DEACT" 
+
+   (M_BRANCH_CODE      DN_REF_LICENCEE_SETTLEMENT.BRANCH_CODE%TYPE,
+    M_ACC_NO           DN_REF_LICENCEE_SETTLEMENT.ACC_NO%TYPE,
+    M_USER              varchar
+
+   )
+
+AS
+
+BEGIN
+
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_Settlement_Options');  --added by ashini on 31/10/2005 for sr0509-047
+
+
+    /* PROCEDURE  -  TO MODIFY LICENCEE_SETTLEMENT
+       SYSTEM     -  DEALNET
+       CREATED BY -  UPUL
+       CREATED ON -  */
+
+UPDATE DN_REF_LICENCEE_SETTLEMENT SET
+       ACTIVE_STATUS='N'
+WHERE  BRANCH_CODE=M_BRANCH_CODE AND ACC_NO=M_ACC_NO AND ACTIVE_STATUS='Y';
+
+COMMIT;
+
+END SETTLEMENT_OPT_DEACT;
+
+/

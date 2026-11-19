@@ -1,0 +1,21 @@
+--------------------------------------------------------
+--  DDL for Function DN_RETURN_PRICE_SHARE
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_RETURN_PRICE_SHARE" 
+(
+ M_DEAL_NO     DN_TRN_OUTP_SALE.DEAL_NO%TYPE
+)
+RETURN VARCHAR2
+
+AS
+M_PRICE  NUMBER;
+
+BEGIN
+  SELECT PRICE_CLEAN INTO M_PRICE FROM DN_TRN_OUTP_SALE
+  WHERE DEAL_NO=M_DEAL_NO;
+RETURN M_PRICE;
+
+END DN_RETURN_PRICE_SHARE;
+
+/

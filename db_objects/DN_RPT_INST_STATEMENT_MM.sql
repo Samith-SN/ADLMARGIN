@@ -1,0 +1,315 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_RPT_INST_STATEMENT_MM
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_RPT_INST_STATEMENT_MM" 
+(
+M_FROM_DATE                 VARCHAR2,
+M_PORTFOLIO_CODE            DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE,
+M_USER                      DN_TEMP_INST_STATEMENT_IR.USER_NAME%TYPE
+
+)
+ AS
+
+ M_DATE           DATE;
+ M_NO_OF_DATES    NUMBER;
+ M_PURCHASES      NUMBER;
+ M_SALES          NUMBER;
+ M_COUNT          NUMBER:=0;
+ M_DIVIDEND       NUMBER;
+ M_SOR            NUMBER;
+ M_EFF_VAL_DATE   DATE;
+ M_MAT_DATE       DATE;
+ M_LEG1           NUMBER;
+ M_TENOR          NUMBER;
+ M_INTEREST       NUMBER;
+ M_COUNTD         NUMBER;
+
+ BEGIN
+  DELETE FROM DN_TEMP_INST_STATEMENT_MM WHERE USER_NAME=M_USER;
+--  COMMIT;
+  --------------------------------------------------------------------
+
+SELECT LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY'))-TO_DATE(M_FROM_DATE,'DD-MM-YYYY')
+INTO M_NO_OF_DATES
+FROM DUAL;
+
+
+
+
+
+FOR Q IN (SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,YIELD,LEG1_VALUE,LEG2_VALUE,
+                 INT_AMOUNT,PAYMENT_TO_BORR,PAYMENT_TO_LEND
+          --INTO   M_EFF_VAL_DATE,M_MAT_DATE,M_TENOR,M_LEG1,M_INTEREST
+          FROM(
+          SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,YIELD,LEG1_VALUE,LEG2_VALUE,
+                 INT_AMOUNT,0 PAYMENT_TO_BORR,0 PAYMENT_TO_LEND
+          FROM   DN_TRN_REPO_FRESH
+          WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                 EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                 EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                 APP_STATUS = 'CONF'
+          UNION ALL
+
+          SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,YEILD,LEG1_VALUE,LEG2_VALUE,
+                 INT_AMOUNT,PAYMENT_TO_BORR,PAYMENT_TO_LEND
+          FROM   DN_TRN_REPO_ROLLOVER
+          WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                 EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                 EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                 APP_STATUS = 'CONF'
+          ------------------------added by sva on 07-01-2006 ----------------------------------
+          UNION ALL
+          SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,YIELD,-1*LEG1_VALUE,LEG2_VALUE,
+                 -1*INT_AMOUNT,0 PAYMENT_TO_BORR,0 PAYMENT_TO_LEND
+          FROM   DN_TRN_REPO_FRESH
+          WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                 EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                 EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                 APP_STATUS = 'CONF'
+          UNION ALL
+
+          SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,YEILD,-1*LEG1_VALUE,LEG2_VALUE,
+                 -1*INT_AMOUNT,PAYMENT_TO_BORR,PAYMENT_TO_LEND
+          FROM   DN_TRN_REPO_ROLLOVER
+          WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                 EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                 EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                 APP_STATUS = 'CONF'
+
+          ----------------------------end of 07-01-2006-----------------------------------------
+
+          )
+          ORDER  BY EFF_VALDATE) LOOP
+
+IF M_COUNT =0 THEN
+
+-----------------------------------------------------------------------------------
+SELECT COUNT(*) INTO M_COUNTD FROM
+(SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,LEG1_VALUE,LEG2_VALUE ,INT_AMOUNT
+FROM   DN_TRN_REPO_FRESH
+WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_FRESH
+                         WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+UNION ALL
+
+SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,LEG1_VALUE,LEG2_VALUE ,INT_AMOUNT
+FROM   DN_TRN_REPO_ROLLOVER
+WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_ROLLOVER
+                         WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+-------------------------------added by sva on 07-01-2006-------------------------
+UNION ALL
+SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,-1*LEG1_VALUE,LEG2_VALUE ,-1*INT_AMOUNT
+FROM   DN_TRN_REPO_FRESH
+WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_FRESH
+                         WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+UNION ALL
+
+SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,-1*LEG1_VALUE,LEG2_VALUE ,-1*INT_AMOUNT
+FROM   DN_TRN_REPO_ROLLOVER
+WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_ROLLOVER
+                         WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+--------------------------------end of 07-01-2006--------------------------------
+);
+
+
+IF M_COUNTD >0 THEN
+
+
+--ADDED BY SVA ON 22-03-2005 FOR INTEREST
+SELECT EFF_VALDATE,MATURITY_DATE,LEG1_VALUE--+DN_GET_BALANCE_BF(M_FROM_DATE,M_PORTFOLIO_CODE)
+INTO   M_EFF_VAL_DATE,M_MAT_DATE,M_LEG1
+FROM(
+
+SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,LEG1_VALUE,LEG2_VALUE ,INT_AMOUNT
+FROM   DN_TRN_REPO_FRESH
+WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_FRESH
+                         WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+UNION ALL
+
+SELECT DEAL_NO,LEND_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,LEG1_VALUE,LEG2_VALUE ,INT_AMOUNT
+FROM   DN_TRN_REPO_ROLLOVER
+WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_ROLLOVER
+                         WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+-------------------------------added by sva on 07-01-2006-------------------------
+UNION ALL
+SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,-1*LEG1_VALUE,LEG2_VALUE ,-1*INT_AMOUNT
+FROM   DN_TRN_REPO_FRESH
+WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_FRESH
+                         WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+UNION ALL
+
+SELECT DEAL_NO,BORR_PORTFOLIO_CODE,EFF_VALDATE,MATURITY_DATE,TENOR,-1*LEG1_VALUE,LEG2_VALUE ,-1*INT_AMOUNT
+FROM   DN_TRN_REPO_ROLLOVER
+WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+       MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+       MATURITY_DATE IN (SELECT MAX(MATURITY_DATE )
+                         FROM DN_TRN_REPO_ROLLOVER
+                         WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                MATURITY_DATE = TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                EFF_VALDATE   <=TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                APP_STATUS = 'CONF' ) AND
+       --EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+       APP_STATUS = 'CONF'
+--------------------------------end of 07-01-2006--------------------------------
+
+)
+ORDER  BY EFF_VALDATE;
+
+-----------------------------------------------------------------------------------
+
+         --IF TO_DATE(M_FROM_DATE,'DD-MM-YYYY') =  Q.EFF_VALDATE THEN
+            INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,BALANCE,USER_NAME)
+            VALUES (TO_CHAR(M_MAT_DATE,'DD-Mon-YY'),M_LEG1,M_USER);
+            --VALUES (TO_CHAR(Q.EFF_VALDATE,'DD-Mon-YY'),Q.LEG1_VALUE,M_USER);
+--------------END OF INTEREST
+   ELSE
+
+       INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,BALANCE,USER_NAME)
+            VALUES (TO_CHAR(TO_DATE(M_FROM_DATE,'DD-MM-YYYY'),'DD-Mon-YY'),'0',M_USER);
+
+   END IF;
+            M_LEG1 := Q.LEG1_VALUE;
+         --END IF;
+
+         INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,MAT_DATE,NET_MOVEMENT,TENOR,YIELD,INTEREST,BALANCE,USER_NAME)
+         VALUES (TO_CHAR(Q.EFF_VALDATE,'DD-Mon-YY'),TO_CHAR(Q.MATURITY_DATE,'DD-Mon-YY'),0,Q.TENOR,Q.YIELD,Q.INT_AMOUNT,
+                Q.LEG1_VALUE,M_USER);
+
+         M_COUNT := 1;
+
+      ELSE
+
+         INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,MAT_DATE,NET_MOVEMENT,TENOR,YIELD,INTEREST,BALANCE,USER_NAME)
+         VALUES (TO_CHAR(Q.EFF_VALDATE,'DD-Mon-YY'),TO_CHAR(Q.MATURITY_DATE,'DD-Mon-YY'),
+                 DECODE(Q.PAYMENT_TO_BORR,0,-1*Q.PAYMENT_TO_LEND,Q.PAYMENT_TO_BORR),
+                 Q.TENOR,Q.YIELD,Q.INT_AMOUNT,Q.LEG1_VALUE,M_USER);
+
+      END IF;
+
+
+END LOOP; --Q LOOP END
+
+FOR X IN ( SELECT DEAL_NO,PRIOR_DEAL_NO,SETTLE_DATE,PAYMENT_TO_LEND
+           FROM   DN_TRN_REPO_SETTLEMENT
+           WHERE  PRIOR_DEAL_NO IN (SELECT DEAL_NO
+                                    FROM(
+                                    SELECT DEAL_NO
+                                    FROM   DN_TRN_REPO_FRESH
+                                    WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                           EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                           EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                                           APP_STATUS = 'CONF'
+                                    UNION ALL
+
+                                    SELECT DEAL_NO
+                                    FROM   DN_TRN_REPO_ROLLOVER
+                                    WHERE  BORR_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                           EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                           EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                                           APP_STATUS = 'CONF'
+                                    ----------------------@@@@@@@@@@@@@@@@@@@@@
+                                    UNION ALL
+
+                                    SELECT DEAL_NO
+                                    FROM   DN_TRN_REPO_FRESH
+                                    WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                           EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                           EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                                           APP_STATUS = 'CONF'
+                                    UNION ALL
+
+                                    SELECT DEAL_NO
+                                    FROM   DN_TRN_REPO_ROLLOVER
+                                    WHERE  LEND_PORTFOLIO_CODE = M_PORTFOLIO_CODE AND
+                                           EFF_VALDATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                                           EFF_VALDATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')) AND
+                                           APP_STATUS = 'CONF'
+
+                                    ----------------------@@@@@@@@@@@@@@@@@@@@@
+                                    )) AND
+                  APP_STATUS = 'CONF' AND
+                  SETTLE_DATE >= TO_DATE(M_FROM_DATE,'DD-MM-YYYY') AND
+                  SETTLE_DATE <= LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY'))) LOOP
+
+         INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,NET_MOVEMENT,USER_NAME)
+         VALUES (TO_CHAR(X.SETTLE_DATE,'DD-Mon-YY'),-1*X.PAYMENT_TO_LEND,M_USER);
+
+END LOOP;
+
+
+
+/*INSERT INTO DN_TEMP_INST_STATEMENT_MM(VALUE_DATE,INTEREST,BALANCE,USER_NAME)
+SELECT LAST_DAY(TO_DATE(M_FROM_DATE,'DD-MM-YYYY')),SUM(NVL(INTEREST,0)),
+       SUM(NVL(NET_MOVEMENT,0))+SUM(NVL(INTEREST,0))+NVL(M_LEG1,0),M_USER
+FROM   DN_TEMP_INST_STATEMENT_MM
+WHERE  USER_NAME = M_USER;
+*/
+COMMIT;
+END;
+
+/

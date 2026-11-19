@@ -1,0 +1,86 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INVREPODEAL_INTACCR_CONF
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INVREPODEAL_INTACCR_CONF" 
+(
+    M_DEAL_NO           DN_TRN_REPO_FRESH.DEAL_NO%TYPE--GET THE DEAL NO
+)
+AS
+
+
+/********************************************************
+     DESCRIPTION: CALCULATE INT. PAYMENTS FOR MONTHE ENDS
+     SYSTEM:      MBFSL
+     CREATE BY:   KEITH
+     DATE:        2004-11-29 FOR for vc ref 04-266 backdated deals
+**********************************************************/
+
+
+M_LAST_DAILY         DATE;
+M_MATURITY_DATE      DATE;
+M_EFFVAL_DATE        DATE;
+M_COUNT              NUMBER;
+
+BEGIN
+
+
+SELECT  TO_DATE(TO_CHAR(LAST_DAILY,'DD-MM-YYYY'),'DD-MM-YYYY') INTO  M_LAST_DAILY
+FROM    DN_SYS_PARAMETER;
+
+SELECT  TO_DATE(TO_CHAR(MATURITY_DATE,'DD-MM-YYYY'),'DD-MM-YYYY'),
+        TO_DATE(TO_CHAR(EFF_VALDATE,'DD-MM-YYYY'),'DD-MM-YYYY')
+        INTO M_MATURITY_DATE,M_EFFVAL_DATE
+FROM    (SELECT MATURITY_DATE,EFF_VALDATE
+          FROM   DN_TRN_REPO_FRESH
+          WHERE  DEAL_NO=M_DEAL_NO
+          UNION
+          SELECT MATURITY_DATE,EFF_VALDATE
+          FROM   DN_TRN_REPO_ROLLOVER
+          WHERE  DEAL_NO=M_DEAL_NO
+          );
+
+
+    IF (M_MATURITY_DATE-1) < M_LAST_DAILY THEN
+
+        DN_INTACCR_DAYENDS_2(M_DEAL_NO);--FILL THE CORRECT MONTH ENDS(EFF. DATE TO MAT. DATE)
+
+        SELECT COUNT(*) INTO M_COUNT
+        FROM DN_TEMP_MONTHENDS;
+
+        IF M_COUNT>0 THEN
+
+            FOR I IN  ( SELECT MONTH_END_DAYS FROM DN_TEMP_MONTHENDS )
+            LOOP
+                --RAISE_APPLICATION_ERROR(-20201,'M_MATURITY_DATE');
+                --DN_INV_REPO_DEAL_INT_ACCR(I.MONTH_END_DAYS);--CALL TO INT. CALCU. PROCEDURE
+                DN_INV_REPO_DEAL_INT_ACCR_DEAL(I.MONTH_END_DAYS,M_DEAL_NO);--CALL TO INT. CALCU. PROCEDURE
+                DN_ACC_LINK_REPO_DAYEND_DEAL(I.MONTH_END_DAYS,M_DEAL_NO);--Link outright transactions to the accounting after the dayend routine
+            END LOOP;
+
+        END IF;
+
+    ELSIF M_EFFVAL_DATE < M_LAST_DAILY THEN
+
+        DN_INTACCR_DAYENDS_1(M_DEAL_NO);--FILL THE CORRECT MONTH ENDS(EFF. DATE TO LAST DAILY)
+
+        SELECT COUNT(*) INTO M_COUNT
+        FROM DN_TEMP_MONTHENDS;
+
+        IF M_COUNT>0 THEN
+
+            FOR I IN  ( SELECT MONTH_END_DAYS FROM DN_TEMP_MONTHENDS )
+            LOOP
+                --DN_INV_REPO_DEAL_INT_ACCR(I.MONTH_END_DAYS);--CALL TO INT. CALCU. PROCEDURE
+                DN_INV_REPO_DEAL_INT_ACCR_DEAL(I.MONTH_END_DAYS,M_DEAL_NO);--CALL TO INT. CALCU. PROCEDURE
+                DN_ACC_LINK_REPO_DAYEND_DEAL(I.MONTH_END_DAYS,M_DEAL_NO);--Link outright transactions to the accounting after the dayend routine
+            END LOOP;
+
+        END IF;
+
+    END IF;
+
+END;
+
+/

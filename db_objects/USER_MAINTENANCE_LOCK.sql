@@ -1,0 +1,49 @@
+--------------------------------------------------------
+--  DDL for Procedure USER_MAINTENANCE_LOCK
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."USER_MAINTENANCE_LOCK" 
+  (
+    M_DN_USER                       DN_REF_USER.DN_USER%TYPE,
+    M_SCRNAME                       VARCHAR2,
+    M_CHANGE_USER                   DN_REF_USER.DN_USER%TYPE
+  )
+  AS
+     MAIN_CUR          INTEGER;
+     IGNORE            INTEGER;
+     M_DURATION        NUMBER;
+
+   BEGIN
+
+DN_VALIDATE_SAVE_RIGHTS(M_CHANGE_USER,'WD_UNLOCK_USER');  --added by ashini on 31/10/2005 for sr0509-047
+
+
+  --  DN_VALIDATE_SAVE_RIGHTS(M_CHANGE_USER,M_SCRNAME);
+  --ALTER USER TEPRO ACCOUNT LOCK;
+  ----------------------------------------------crate password----------------------------------------
+   MAIN_CUR:=DBMS_SQL.OPEN_CURSOR;
+   DBMS_SQL.PARSE(MAIN_CUR,
+   'ALTER USER '||UPPER(M_DN_USER)||' ACCOUNT UNLOCK',DBMS_SQL.V7);
+   IGNORE:=DBMS_SQL.EXECUTE(MAIN_CUR);
+
+       UPDATE DN_REF_USER
+       SET    ACTIVE_STATUS = 'Y'
+       WHERE  DN_USER =  M_DN_USER;
+
+ SELECT EXPIRE_DURATION
+ INTO   M_DURATION
+ FROM   DN_REF_PASSWORD_EXPIRE_DUR;
+
+ UPDATE DN_REF_PASSWORD_UPDATE
+ SET    ENT_DATE = SYSDATE -(M_DURATION-1)
+ WHERE  DN_USER  = M_DN_USER;
+
+
+INSERT INTO DN_REF_USER_UNLOCK( DN_USER,ENT_DATE,ENT_USER)
+VALUES (M_DN_USER,SYSDATE,M_CHANGE_USER);
+
+ COMMIT;
+ END USER_MAINTENANCE_LOCK;
+
+/

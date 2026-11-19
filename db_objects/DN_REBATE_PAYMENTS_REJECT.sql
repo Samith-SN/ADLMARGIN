@@ -1,0 +1,45 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_REBATE_PAYMENTS_REJECT
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_REBATE_PAYMENTS_REJECT" 
+   (
+   M_PAYMENT_NO         DN_TRN_BO_SETTL_PAYMENT.PAYMENT_NO%TYPE,
+   M_ACTIVE_STATUS      DN_REF_PORTFOLIO.ACTIVE_STATUS%TYPE,
+   M_USER               DN_DOC_STATUS_LOG.DN_USER%TYPE
+   )
+AS
+M_NUMBER VARCHAR(100);
+M_AMT  DN_TRN_REBATE_PAYMENT.PAY_AMOUNT%TYPE;
+
+/*
+CREATED BY - K. M.WARUNA SRI JAYANATH
+CREATED ON - 2012-02-27
+SYSTEM     - ADLMARGIN
+
+*/
+        
+
+
+BEGIN
+
+--RAISE_APPLICATION_ERROR(-20201,'PAYMENT INVALID='||M_PAYMENT_NO||'**');
+  
+  
+ IF M_ACTIVE_STATUS='ENT' THEN
+  
+   UPDATE DN_TRN_REBATE_PAYMENT
+  SET    PAY_STATUS  = 'REJ'
+  WHERE  PAYMENT_NO  = M_PAYMENT_NO;
+  
+
+            
+END IF;
+
+
+
+
+END ; 
+
+/

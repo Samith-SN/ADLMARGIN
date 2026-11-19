@@ -1,0 +1,104 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_TRN_SETTLEMENT_DEPOSITS
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_TRN_SETTLEMENT_DEPOSITS" 
+   (M_DEPOSIT_NO    IN OUT   DN_TRN_BO_SETTL_DEPOSIT.DEPOSIT_NO%TYPE,
+    M_REC_NO                 DN_TRN_BO_SETTL_DEPOSIT.REC_NO%TYPE,
+    M_SUS_REF_NO             DN_TRN_BO_SETTL_DEPOSIT.SUS_REF_NO%TYPE,
+    M_SETTLE_MODE            DN_TRN_BO_SETTL_DEPOSIT.SETTLE_MODE%TYPE,
+    M_PAYER_BRANCH_CODE      DN_TRN_BO_SETTL_DEPOSIT.PAYER_BRANCH_CODE%TYPE,
+    M_PAYER_ACC_NO           DN_TRN_BO_SETTL_DEPOSIT.PAYER_ACC_NO%TYPE,
+    M_CHEQUE_NO              DN_TRN_BO_SETTL_DEPOSIT.CHEQUE_NO%TYPE,
+    M_AMOUNT                 DN_TRN_BO_SETTL_DEPOSIT.DEPOSIT_AMOUNT%TYPE,
+    M_DEPO_BRANCH_CODE       DN_TRN_BO_SETTL_DEPOSIT.DEPO_BRANCH_CODE%TYPE,
+    M_DEPO_ACC_NO            DN_TRN_BO_SETTL_DEPOSIT.DEPO_ACC_NO%TYPE,
+    M_DREF_NO                DN_TRN_BO_SETTL_DEPOSIT.DEPOSIT_REF_NO%TYPE,
+    M_USER                   DN_TRN_BO_SETTL_DEPOSIT.DN_USER%TYPE,
+    M_DUMMY_NO               DN_TRN_BO_SETTL_DEPOSIT.DEPOSIT_NO%TYPE
+   )
+AS
+
+BEGIN
+
+    /* PROCEDURE  -  SETTLEMENT DEPOSITS
+       SYSTEM     -  DEALNT
+       CREATED BY -  DAYAN.
+       CREATED ON -  14/07/1999 */
+
+
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_Deposits'); --added by ashini on 31/10/2005 for sr0509-047
+
+
+    IF M_DUMMY_NO IS NULL THEN
+       SELECT TO_CHAR(SYSDATE,'YY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_SET_DEPO.NEXTVAL),3,'0') INTO M_DEPOSIT_NO FROM DUAL;
+       M_DEPOSIT_NO:='SDMT'||M_DEPOSIT_NO;
+    ELSE
+       M_DEPOSIT_NO:=M_DUMMY_NO;
+    END IF;
+
+--RAISE_APPLICATION_ERROR(-20201,M_DEPO_BRANCH_CODE||'     '||M_DEPO_ACC_NO||'   '||M_DEPOSIT_NO);
+   INSERT INTO DN_TRN_BO_SETTL_DEPOSIT
+          (DEPOSIT_NO,
+           REC_NO,
+           SUS_REF_NO,
+           SETTLE_MODE,
+           PAYER_BRANCH_CODE,
+           PAYER_ACC_NO,
+           CHEQUE_NO,
+           DEPOSIT_AMOUNT,
+           DEPO_BRANCH_CODE,
+           DEPO_ACC_NO,
+           TRNDATE,
+           DN_USER,
+           DEPOSIT_REF_NO)
+  VALUES
+            (M_DEPOSIT_NO,
+            M_REC_NO,
+            M_SUS_REF_NO,
+            M_SETTLE_MODE,
+            M_PAYER_BRANCH_CODE,
+            M_PAYER_ACC_NO,
+            M_CHEQUE_NO,
+            M_AMOUNT,
+
+            M_DEPO_ACC_NO,
+            M_DEPO_BRANCH_CODE,
+            SYSDATE,
+            M_USER,
+            M_DREF_NO);
+
+   UPDATE DN_TRN_BO_SETTL_RECEIPT
+    SET
+        STATUS='CRD'
+    WHERE
+       REC_NO=M_REC_NO AND
+       SUS_REF_NO=M_SUS_REF_NO AND
+       SETTLE_MODE=M_SETTLE_MODE AND
+       PAYER_BRANCH_CODE=M_PAYER_BRANCH_CODE AND
+       PAYER_ACC_NO=M_PAYER_ACC_NO ;
+        -- ADDED FOR TIME LOG MANAGEMENT BY YASODHA ON 10-09-2000
+
+    INSERT INTO DN_TIME_LOG_SETTLE
+
+          (DOC_REF_NO,
+           REL_DEAL_NO,
+           REL_SETTL_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            ( M_DEPOSIT_NO,
+              M_SUS_REF_NO,
+              M_REC_NO,
+              M_USER,
+              SYSDATE,
+              'SETTLEMENT DEPOSIT'
+           );
+
+       COMMIT;
+
+    END MBFSL_TRN_SETTLEMENT_DEPOSITS;
+
+/

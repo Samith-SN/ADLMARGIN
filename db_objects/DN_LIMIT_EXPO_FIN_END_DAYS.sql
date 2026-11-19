@@ -1,0 +1,30 @@
+--------------------------------------------------------
+--  DDL for Function DN_LIMIT_EXPO_FIN_END_DAYS
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_LIMIT_EXPO_FIN_END_DAYS" 
+(
+ M_MAT_END_DAYS        LMT_STR_OVRL_EXPO.END_DAYS%TYPE
+ )
+
+ RETURN  INTEGER
+
+IS
+
+          -- FUNCTION     : THIS RETURNS END DAY;
+          -- SYSTEM       : DEALNET SYSTEM
+          -- CREATED BY   : SUKATHIS
+          -- CREATED ON   : 24/01/2000
+
+ M_RETURN_DAYS       INTEGER;
+
+BEGIN
+SELECT DISTINCT MIN(END_DAYS) INTO M_RETURN_DAYS
+    FROM LMT_STR_OVRL_EXPO
+    WHERE END_DAYS>=M_MAT_END_DAYS;
+
+RETURN M_RETURN_DAYS;
+
+END DN_LIMIT_EXPO_FIN_END_DAYS;
+
+/

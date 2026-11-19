@@ -1,0 +1,247 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_PRE_AUTHO_IN1
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_PRE_AUTHO_IN1" 
+(
+    M_DEAL_NO  IN OUT    DN_TRN_OUTP_PRE_AUTHO.DEAL_NO%TYPE,
+    M_BCODE              DN_TRN_OUTP_PRE_AUTHO.BUY_PORTFOLIO_CODE%TYPE,
+    M_SCODE              DN_TRN_OUTP_PRE_AUTHO.SELL_PORTFOLIO_CODE%TYPE,--
+    M_INSTYPE            DN_TRN_OUTP_PRE_AUTHO.INST_TYPE%TYPE,
+    M_SECIDEN            DN_TRN_OUTP_PRE_AUTHO.SECURITY_CODE%TYPE,
+    M_ENCODE             DN_TRN_OUTP_PRE_AUTHO.ENDOSER_CODE%TYPE,
+    M_CURR               DN_TRN_OUTP_PRE_AUTHO.CURR_CODE%TYPE,
+    M_SEL_DATETYPE       DN_TRN_OUTP_PRE_AUTHO.EFF_VALDATE_TYPE%TYPE,
+    M_V_DATE             CHAR,
+    M_B_CODE             CHAR,
+    M_YIELD              DN_TRN_OUTP_PRE_AUTHO.YIELD%TYPE,
+    M_SETVAL_MIN         DN_TRN_OUTP_PRE_AUTHO.SETTLE_VALUE_MIN%TYPE,--12
+    M_CLEAN              DN_TRN_OUTP_PRE_AUTHO.PRICE_CLEAN%TYPE,
+    M_FACEVAL            DN_TRN_OUTP_PRE_AUTHO.FACE_VALUE%TYPE,
+    M_DIRTY              DN_TRN_OUTP_PRE_AUTHO.PRICE_DIRTY%TYPE,--15
+    M_COST_MIN           DN_TRN_OUTP_PRE_AUTHO.COST_MIN%TYPE,
+    M_COST_MAX           DN_TRN_OUTP_PRE_AUTHO.COST_MAX%TYPE,
+    M_USERNAME           DN_TRN_OUTP_PRE_AUTHO.DN_USER%TYPE,
+    M_DEAL_NUMBER        DN_TRN_OUTP_PRE_AUTHO.DEAL_NO%TYPE,
+    M_CUST_STAT          CHAR,--added by nirmala
+    M_SCRIPT_STAT        DN_TRN_OUTP_PRE_AUTHO.SCRIPT_STATUS%TYPE,
+    M_GDEAL_NUMBER       DN_TRN_OUTP_PRE_AUTHO.DEAL_NO%TYPE,
+    M_DEAL_TYPE          VARCHAR2,
+    M_NOMALUE            DN_TRN_OUTP_PRE_AUTHO.NOMINAL_VALUE%TYPE,
+    M_BUY_DATE           VARCHAR2,
+    M_SEL_DATE           VARCHAR2,
+    M_CONTRACT_NO        DN_TRN_OUTP_PRE_AUTHO.CONTRACT_NO%TYPE,
+    M_INVENTORY_TYPE     DN_TRN_OUTP_PRE_AUTHO.INVENTORY_TYPE%TYPE,--ADDED BY SVA ON 23-03-2005 FOR CUSTODIAN INVENTORY
+    M_SCREEN             VARCHAR2,
+   -- M_SWIFT_STAT         DN_TRN_OUTP_PRE_AUTHO.SWIFT_STATUS%TYPE--added by Manjula on 20-07-2004 VC of PCTF NO 0406-051
+    M_TRANSACTION_TYPE   DN_TRN_OUTP_PRE_AUTHO.TRANSACTION_TYPE%TYPE,
+    M_ORDER_QUALIFIER    DN_TRN_OUTP_PRE_AUTHO.ORDER_QUALIFIER%TYPE,
+    M_TIME_IN_FORCE      DN_TRN_OUTP_PRE_AUTHO.TIME_IN_FORCE%TYPE,
+    M_SEND_BROKER_STATUS DN_TRN_OUTP_PRE_AUTHO.SEND_BROKER_STATUS%TYPE,
+    M_MATURITY_DATE      VARCHAR2,
+    M_REASON_ID          DN_REF_PRE_SALE_REASON.REASON_ID%TYPE, --35
+    M_FACILITY_LIMIT_CASH   DN_TRN_OUTP_PRE_AUTHO.FACILITY_LIMIT_CASH%TYPE,--36
+    M_FACILITY_LIMIT_SHARE  DN_TRN_OUTP_PRE_AUTHO.FACILITY_LIMIT_SHARE%TYPE,--37
+    M_SETVAL_MAX            DN_TRN_OUTP_PRE_AUTHO.SETTLE_VALUE_MAX%TYPE,--38
+    
+    M_UTILIZED_AMOUNT       DN_TRN_OUTP_PRE_AUTHO.UTILIZED_AMOUNT%TYPE, 
+    M_UN_UTILIZED_AMOUNT    DN_TRN_OUTP_PRE_AUTHO.UN_UTILIZED_AMOUNT%TYPE,
+    M_FACILITY_INT_RATE     DN_TRN_OUTP_PRE_AUTHO.FACILITY_INT_RATE%TYPE,
+    M_LEG2_MIN              DN_TRN_OUTP_PRE_AUTHO.LEG2_MIN%TYPE, 
+    M_LEG2_MAX              DN_TRN_OUTP_PRE_AUTHO.LEG2_MAX%TYPE 
+)
+
+AS
+
+   M_USER             DN_TRN_OUTP_PRE_AUTHO.DN_USER%TYPE;
+   M_VAL_DATE         DN_TRN_OUTP_PRE_AUTHO.EFF_VALDATE%TYPE;
+   M_BASIS            DN_TRN_OUTP_PRE_AUTHO.INT_RATE_BASE_CODE%TYPE;
+   M_TENOR            NUMBER;
+   MM_CURRENCY_VALUE  DN_REF_EXCHANGE_RATES.CURRENCY_VALUE%TYPE;--CURRENCY
+   err_num   varchar2(200);
+   err_msg   varchar2(200);
+
+
+BEGIN
+
+--RAISE_APPLICATION_ERROR(-20201,'M_SETVAL_MIN********************'||M_SETVAL_MIN);
+--DN_VALIDATE_SAVE_RIGHTS(M_USERNAME,M_SCREEN); 
+
+
+    -- PROCEDURE  -  TO INSERT DN_TRN_OUTP_PRE_AUTHO
+    -- SYSTEM     -  ADLMARGIN SYSTEM
+    -- CREATED BY -  K.M. WARUNA SRI JAYANATH
+    -- CREATED ON -  12/02/2012
+   
+    
+    M_USER:=M_USERNAME;
+
+
+    IF M_DEAL_NUMBER IS NULL THEN   ---------------------11
+      
+        SELECT TO_CHAR(SYSDATE,'YY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||LPAD(TO_CHAR(DN_SEQ_PRE_AUTH.NEXTVAL),4,'0') INTO M_DEAL_NO FROM DUAL;
+        M_DEAL_NO:=  'PAMT'||M_DEAL_NO;
+    
+    ELSE  ---------------------11
+       M_DEAL_NO:=M_DEAL_NUMBER;
+    END IF;  ---------------------11
+
+    SELECT TO_DATE(M_V_DATE,'DD/MM/YYYY') INTO M_VAL_DATE FROM DUAL;
+ 
+   
+
+IF M_CURR = 'SLR' THEN 
+
+ 
+
+INSERT INTO DN_TRN_OUTP_PRE_AUTHO
+          (DEAL_NO,
+           BUY_PORTFOLIO_CODE,
+           SELL_PORTFOLIO_CODE,
+           INST_TYPE,
+           SECURITY_CODE,
+           ENDOSER_CODE,
+           CURR_CODE,
+           EFF_VALDATE_TYPE,
+           EFF_VALDATE,
+           INT_RATE_BASE_CODE,
+           YIELD,--11
+           
+           SETTLE_VALUE_MIN,
+           SETTLE_VALUE_MAX,--13
+           PRICE_CLEAN,
+           FACE_VALUE,
+           PRICE_DIRTY,--16
+           COST_MAX,--17
+           COST_MIN,
+           DN_USER,
+           CUSTODIAL_STATUS,
+           SCRIPT_STATUS,  --21 scriptless
+           
+           GROUP_DEALNO,
+           NOMINAL_VALUE,--23
+           PURCHASE_COST_MIN,--24
+           PURCHASE_COST_MAX,--25
+           BROKER_COST_MIN,--26
+           BROKER_COST_MAX,--27
+           CONTRACT_NO,
+           INVENTORY_TYPE,     --ADDED BY SVA ON 23-03-2005 FOR CUSTODIAN INVENTORY
+         --SWIFT_STATUS  -- added by Manjula  on 20-07-2004 VC of PCTF 0406-051
+           TRANSACTION_TYPE,--30
+           
+           BUY_SETLE_DATE,
+           SELL_SETLE_DATE,
+           ORDER_QUALIFIER,
+           TIME_IN_FORCE,
+           SEND_BROKER_STATUS,
+           MATURITY_DATE,
+           REASON_ID,
+           FACILITY_LIMIT_CASH,
+           FACILITY_LIMIT_SHARE,
+           UTILIZED_AMOUNT,
+           UN_UTILIZED_AMOUNT,
+           FACILITY_INT_RATE,
+           LEG2_MIN,
+           LEG2_MAX
+          )
+          VALUES(
+           M_DEAL_NO,
+           M_BCODE,
+           M_SCODE,
+           M_INSTYPE,
+           M_SECIDEN,
+           M_ENCODE,
+           M_CURR,
+           'UD',
+           M_VAL_DATE,--9
+           'A365',
+           0,    --11
+           
+           M_SETVAL_MIN,-- 12((M_FACEVAL* M_CLEAN)+M_COST_MIN),--CHANGED BY SARANGA ON 25-06-2004
+           M_SETVAL_MAX,
+           M_CLEAN,
+           M_FACEVAL,
+           M_DIRTY,
+           M_FACEVAL*M_CLEAN, --M_COST_MAX,--16
+           M_FACEVAL*M_DIRTY, --M_COST_MIN,--((M_FACEVAL* M_CLEAN)+M_COST_MIN), --CHANGED BY SARANGA ON 28-06-2004 ---0, --CHANGED BY SM ON 19/12/2003  -- 0,
+           M_USER,
+           M_CUST_STAT,--20
+           M_SCRIPT_STAT,--21 scriptless
+           
+           M_GDEAL_NUMBER,
+           M_NOMALUE,
+           M_FACEVAL* M_DIRTY ,--24
+           M_FACEVAL* M_CLEAN ,--25
+           M_SETVAL_MIN-M_FACEVAL* M_CLEAN,
+           M_SETVAL_MAX-M_FACEVAL* M_DIRTY,
+           M_CONTRACT_NO,
+           M_INVENTORY_TYPE,--ADDED BY SVA ON 23-03-2005 FOR CUSTODIAN INVENTORY
+         --  M_SWIFT_STAT  -- ADDED BY MANJULA ON 20-07-2004 VC of PCTF 0406-051
+           M_TRANSACTION_TYPE ,
+           TO_DATE(M_BUY_DATE,'DD-MM-YYYY'),
+           TO_DATE(M_SEL_DATE,'DD-MM-YYYY'),
+           M_ORDER_QUALIFIER,
+           M_TIME_IN_FORCE,
+           M_SEND_BROKER_STATUS,
+           TO_DATE(M_MATURITY_DATE,'DD/MM/YYYY'),
+           M_REASON_ID,
+           M_FACILITY_LIMIT_CASH,
+           M_FACILITY_LIMIT_SHARE,
+           M_UTILIZED_AMOUNT,
+           M_UN_UTILIZED_AMOUNT,
+           M_FACILITY_INT_RATE,
+           M_LEG2_MIN,
+           M_LEG2_MAX
+          );
+         
+           END IF;--GROUP DEALS  ---------------------13
+        --***************ADDED FOR TIME LOG REQUIREMRNT  BY S.YASODHA****************
+           INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USER,
+              SYSDATE,
+              'ENTERED'
+           );
+
+
+
+
+
+
+--MBFSL_OUTRIGHT_EQUITY_SETTLE(M_DEAL_NO,M_BUY_DATE,M_SEL_DATE);
+
+
+
+
+
+
+COMMIT;
+
+
+
+
+
+/*
+EXCEPTION
+  WHEN OTHERS THEN
+   ROLLBACK;
+
+   err_num :=  substr(SQLCODE,1,15);
+   err_msg := substr(SQLERRM,1,200) ;
+  INSERT INTO DN_REF_SEQUENCE_LOG VALUES (M_DEAL_NO,err_num||''||err_msg,'ERROR IN OUTRIGHT1',SYSDATE);
+  COMMIT;
+ RAISE_APPLICATION_ERROR(-20201,SQLCODE||SQLERRM);
+
+
+*/
+
+END ; 
+
+/

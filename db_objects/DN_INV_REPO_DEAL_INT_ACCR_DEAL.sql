@@ -1,0 +1,228 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_REPO_DEAL_INT_ACCR_DEAL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_REPO_DEAL_INT_ACCR_DEAL" 
+(
+ M_PROCESS_DATE      DN_SYS_PARAMETER.LAST_DAILY%TYPE,
+ M_DEAL_NO1          DN_TRN_REPO_FRESH.DEAL_NO%TYPE--GET THE DEAL NO
+)
+
+   -- Procedure    : Calculate interest acc. from repo deal
+   -- System       : Dealnet system
+   -- Created by   : INDITHA
+   -- COPIED BY  - KEITH FOR SAMPATH on 2004-11-30 for vc ref 04-266 backdated deals
+   -- Created on   : 22-11-2004
+
+  AS
+
+  CURSOR INT_RF_DEAL IS
+     SELECT
+        A.DEAL_NO,
+        A.BORR_PORTFOLIO_CODE,
+        A.LEND_PORTFOLIO_CODE,
+        (M_PROCESS_DATE-A.EFF_VALDATE)+1,
+        A.LEG1_VALUE,
+        A.YIELD,
+        A.INT_ACCR,
+        DECODE(B.DENOMINATOR,'Act',(ADD_MONTHS(EFF_VALDATE,12)-EFF_VALDATE),B.DENOMINATOR)
+     FROM
+        DN_TRN_REPO_FRESH A,
+        DN_REF_INTR_BASE B
+     WHERE
+        A.EFF_VALDATE<=M_PROCESS_DATE
+        AND
+        A.MATURITY_DATE>M_PROCESS_DATE --
+        AND
+        A.APP_STATUS='CONF'
+        AND
+        A.INT_RATE_BASE_CODE=B.INT_RATE_BASE_CODE
+        AND
+        A.DEAL_NO=M_DEAL_NO1;--MODIFIED
+
+  CURSOR INT_RR_DEAL IS
+      SELECT
+        A.DEAL_NO,
+        A.BORR_PORTFOLIO_CODE,
+        A.LEND_PORTFOLIO_CODE,
+        (M_PROCESS_DATE-A.EFF_VALDATE)+1,
+        A.LEG1_VALUE,
+        A.YEILD,
+        A.INT_ACCR,
+        DECODE(B.DENOMINATOR,'Act',(ADD_MONTHS(EFF_VALDATE,12)-EFF_VALDATE),B.DENOMINATOR)
+     FROM
+        DN_TRN_REPO_ROLLOVER A,
+        DN_REF_INTR_BASE B
+     WHERE
+        A.EFF_VALDATE<=M_PROCESS_DATE
+        AND
+        A.MATURITY_DATE>M_PROCESS_DATE
+        AND
+        A.APP_STATUS='CONF'
+        AND
+        A.INT_RATE_BASE_CODE=B.INT_RATE_BASE_CODE
+        AND
+        A.DEAL_NO=M_DEAL_NO1;
+
+  CURSOR INT_PI_DEAL IS
+      SELECT
+        A.DEAL_NO,
+        A.BORR_PORTFOLIO_CODE,
+        A.LEND_PORTFOLIO_CODE,
+        (M_PROCESS_DATE-A.EFF_VALDATE)+1,
+        A.LEG1_VALUE,
+        A.YEILD,
+        A.INT_ACCR,
+        DECODE(B.DENOMINATOR,'Act',(ADD_MONTHS(EFF_VALDATE,12)-EFF_VALDATE),B.DENOMINATOR)
+     FROM
+        DN_TRN_REPO_PERIOD_INT A,
+        DN_REF_INTR_BASE B
+     WHERE
+        A.EFF_VALDATE<=M_PROCESS_DATE
+        AND
+        A.MATURITY_DATE>M_PROCESS_DATE
+        AND
+        A.APP_STATUS='CONF'
+        AND
+        A.INT_RATE_BASE_CODE=B.INT_RATE_BASE_CODE
+        AND
+        A.DEAL_NO=M_DEAL_NO1;
+
+
+   M_DEAL_NO              DN_TRN_REPO_FRESH.DEAL_NO%TYPE;
+   M_BORR_PORTFOLIO_CODE  DN_TRN_REPO_FRESH.BORR_PORTFOLIO_CODE%TYPE;
+   M_LEND_PORTFOLIO_CODE  DN_TRN_REPO_FRESH.LEND_PORTFOLIO_CODE%TYPE;
+   M_DATE_DIFF            NUMBER;
+   M_LEG1_VALUE           DN_TRN_REPO_FRESH.LEG1_VALUE%TYPE;
+   M_YEILD                DN_TRN_REPO_FRESH.YIELD%TYPE;
+   M_INT_ACCR             DN_TRN_REPO_FRESH.INT_ACCR%TYPE;
+   M_DENOMINATOR          DN_REF_INTR_BASE.DENOMINATOR%TYPE;
+
+
+BEGIN
+
+
+   OPEN INT_RF_DEAL;
+
+   LOOP
+
+      FETCH  INT_RF_DEAL INTO
+
+      M_DEAL_NO, M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+      M_DATE_DIFF, M_LEG1_VALUE, M_YEILD, M_INT_ACCR, M_DENOMINATOR;
+
+      EXIT WHEN INT_RF_DEAL%NOTFOUND;
+
+
+      --IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)>0 THEN
+      --2004/05/18 inditha
+
+      IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)<>0 THEN
+
+         INSERT INTO DN_INV_INT_REPO_DEAL
+            (PROCESS_DATE,
+             DEAL_NO,
+             BORR_PORTFOLIO_CODE,
+             LEND_PORTFOLIO_CODE,
+             INT_ACCR
+             )
+            VALUES
+            (M_PROCESS_DATE,
+             M_DEAL_NO,
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+             ROUND(((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),2) -- Rounded by nilu on 08.11.2004 for SRF 0411-017
+             );
+
+
+          UPDATE DN_TRN_REPO_FRESH
+           SET INT_ACCR=ROUND(INT_ACCR+((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),2) -- Rounded by nilu on 08.11.2004 for SRF 0411-017
+          WHERE
+             DEAL_NO=M_DEAL_NO;
+
+      END IF;
+
+    END LOOP;
+
+   OPEN INT_RR_DEAL;
+
+   LOOP
+
+      FETCH  INT_RR_DEAL INTO
+
+      M_DEAL_NO, M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+      M_DATE_DIFF, M_LEG1_VALUE, M_YEILD, M_INT_ACCR, M_DENOMINATOR;
+
+      EXIT WHEN INT_RR_DEAL%NOTFOUND;
+
+
+         --IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)>0 THEN
+         --2004/05/18 inditha
+         IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)<>0 THEN
+
+           INSERT INTO DN_INV_INT_REPO_DEAL
+              (PROCESS_DATE,
+               DEAL_NO,
+               BORR_PORTFOLIO_CODE,
+               LEND_PORTFOLIO_CODE,
+               INT_ACCR
+               )
+              VALUES
+              (M_PROCESS_DATE,
+               M_DEAL_NO,
+               M_BORR_PORTFOLIO_CODE,
+               M_LEND_PORTFOLIO_CODE,
+               ROUND(((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),2) -- Rounded by nilu on 08.11.2004 for SRF 0411-017
+               );
+
+            UPDATE DN_TRN_REPO_ROLLOVER
+             SET INT_ACCR=ROUND(INT_ACCR+((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),2) -- Rounded by nilu on 08.11.2004 for SRF 0411-017
+            WHERE
+               DEAL_NO=M_DEAL_NO;
+
+       END IF;
+
+  END LOOP;
+
+  OPEN INT_PI_DEAL;
+
+   LOOP
+
+      FETCH  INT_PI_DEAL INTO
+
+      M_DEAL_NO, M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+      M_DATE_DIFF, M_LEG1_VALUE, M_YEILD, M_INT_ACCR, M_DENOMINATOR;
+
+      EXIT WHEN INT_PI_DEAL%NOTFOUND;
+
+         IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)>0 THEN
+
+           INSERT INTO DN_INV_INT_REPO_DEAL
+              (PROCESS_DATE,
+               DEAL_NO,
+               BORR_PORTFOLIO_CODE,
+               LEND_PORTFOLIO_CODE,
+               INT_ACCR
+               )
+              VALUES
+              (M_PROCESS_DATE,
+               M_DEAL_NO,
+               M_BORR_PORTFOLIO_CODE,
+               M_LEND_PORTFOLIO_CODE,
+               ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)
+               );
+
+            UPDATE DN_TRN_REPO_PERIOD_INT
+             SET INT_ACCR=INT_ACCR+((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)
+            WHERE
+               DEAL_NO=M_DEAL_NO;
+
+       END IF;
+
+  END LOOP;
+
+
+END DN_INV_REPO_DEAL_INT_ACCR_DEAL;
+
+/

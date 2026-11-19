@@ -1,0 +1,31 @@
+--------------------------------------------------------
+--  DDL for Function DN_RETURN_NARRATION
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_RETURN_NARRATION" 
+(
+  M_ACC_TYPE_CODE	DN_ACC_LICENCEE_GEN_ACCOUNT.ACC_TYPE_CODE%TYPE
+)
+RETURN VARCHAR2
+
+AS
+M_PROC_DESC VARCHAR2(50);
+
+BEGIN
+ IF M_ACC_TYPE_CODE='112' THEN
+     M_PROC_DESC:='Repo Interest Expense';
+     RETURN M_PROC_DESC;
+ ELSE IF M_ACC_TYPE_CODE='113' THEN
+     M_PROC_DESC:='Repo Interest Income';
+     RETURN M_PROC_DESC;
+ ELSE IF M_ACC_TYPE_CODE <> '113' OR M_ACC_TYPE_CODE <> '112' THEN
+
+    M_PROC_DESC:='OTHER';
+    RETURN M_PROC_DESC;
+ END IF;
+END IF;
+END IF;
+
+END DN_RETURN_NARRATION;
+
+/

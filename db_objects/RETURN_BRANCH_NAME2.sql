@@ -1,0 +1,24 @@
+--------------------------------------------------------
+--  DDL for Function RETURN_BRANCH_NAME2
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."RETURN_BRANCH_NAME2" 
+(
+  M_BANK_CODE		DN_REF_BANK.BRANCH_CODE%TYPE
+)
+RETURN VARCHAR2
+
+AS
+M_BRANCH_NAME VARCHAR2(30);
+
+BEGIN
+     SELECT DISTINCT(BRANCH_NAME)
+      INTO M_BRANCH_NAME
+      FROM DN_REF_BANK
+      WHERE BRANCH_CODE = M_BANK_CODE;
+
+RETURN M_BRANCH_NAME;
+
+END RETURN_BRANCH_NAME2;
+
+/

@@ -1,0 +1,31 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_USER_LOCATION
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_USER_LOCATION" 
+(
+ M_USER        DN_REF_USER.DN_USER%TYPE
+ )
+ RETURN VARCHAR2
+ AS
+ M_LOCATION     VARCHAR2(30);
+ M_LOC_CODE     DN_REF_USER.LOC_CODE%TYPE;
+ BEGIN
+   SELECT LOC_CODE
+   INTO   M_LOC_CODE
+   FROM   DN_REF_USER
+   WHERE  DN_USER=M_USER;
+
+   IF(M_LOC_CODE='COLOMBO' OR M_LOC_CODE='COL')THEN
+    M_LOCATION:='%';
+   ELSE
+    M_LOCATION:=M_LOC_CODE||'%';
+   END IF;
+
+  RETURN  M_LOCATION;
+
+
+
+ END DN_GET_USER_LOCATION;
+
+/

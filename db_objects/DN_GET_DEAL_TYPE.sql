@@ -1,0 +1,26 @@
+--------------------------------------------------------
+--  DDL for Function DN_GET_DEAL_TYPE
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_GET_DEAL_TYPE" 
+(
+  MDEAL_MO  DN_TRN_OUTP_SALE.DEAL_NO%TYPE
+
+)
+  Return VARCHAR2 IS
+
+   DEALTYPE  VARCHAR2(7);
+
+
+BEGIN
+
+  SELECT B.INST_CAT INTO  DEALTYPE FROM
+  DN_TRN_OUTP_SALE A,
+  DN_REF_INSTRUMENT B
+  WHERE  A.DEAL_NO=MDEAL_MO  AND A.INST_TYPE=B.INST_TYPE ;
+
+  RETURN DEALTYPE;
+
+END;
+
+/

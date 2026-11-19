@@ -1,0 +1,30 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_OUTRIGHT_EQUITY_SET_MOD
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_OUTRIGHT_EQUITY_SET_MOD" 
+(
+    M_DEAL_NO            DN_TRN_OUTP_SALE.DEAL_NO%TYPE,
+    M_BUY_DATE           VARCHAR2,
+    M_SEL_DATE           VARCHAR2
+
+)
+
+AS
+
+
+
+BEGIN
+
+ UPDATE  DN_TRN_OUTP_SALE_SETTLE_EQUITY
+ SET BUY_SETLE_DATE =TO_DATE(M_BUY_DATE,'DD-MM-YYYY') ,
+ SELL_SETLE_DATE =TO_DATE(M_SEL_DATE,'DD-MM-YYYY')
+ WHERE DEAL_NO=M_DEAL_NO;
+
+
+
+
+END MBFSL_OUTRIGHT_EQUITY_SET_MOD;
+
+/

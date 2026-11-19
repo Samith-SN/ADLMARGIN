@@ -1,0 +1,49 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_WITHDRAWAL_PAY_VOUCHER_SAVE
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_WITHDRAWAL_PAY_VOUCHER_SAVE" 
+   (
+   M_DOCREFNO           DN_TRN_BO_CAP_DEPOSIT.DOCREFNO%TYPE,
+   M_ACTIVE_STATUS      DN_REF_PORTFOLIO.ACTIVE_STATUS%TYPE,
+   M_USER               DN_DOC_STATUS_LOG.DN_USER%TYPE
+   )
+AS
+M_NUMBER VARCHAR(100);
+
+
+/*
+CREATED BY - K. M.WARUNA SRI JAYANATH
+CREATED ON - 2012-02-27
+SYSTEM     - ADLMARGIN
+
+*/
+        
+
+
+BEGIN
+
+--RAISE_APPLICATION_ERROR(-20201,'PAYMENT INVALID=');
+  
+  
+ IF M_ACTIVE_STATUS='ENT' THEN
+  
+ 
+  UPDATE DN_TRN_BO_CAP_DEPOSIT
+  SET    VOUCHER_PRINT_STATUS ='P'
+  WHERE  DOCREFNO  = M_DOCREFNO
+  AND    APP_STATUS  = 'APPR1';
+  
+  
+ 
+
+            
+END IF;
+
+
+
+
+END ; 
+
+/

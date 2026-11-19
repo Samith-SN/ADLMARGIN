@@ -1,0 +1,33 @@
+--------------------------------------------------------
+--  DDL for Procedure PA_OENTRY_DEL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."PA_OENTRY_DEL" 
+
+   (M_REF_NO              IN OUT PA_BID_ENTRY.REF_NO%TYPE,
+    M_SELECT_TYPE               CHAR
+   )
+
+AS
+BEGIN
+IF M_REF_NO IS NOT NULL AND M_SELECT_TYPE='MAIN3' THEN
+
+DELETE FROM PA_BID_ALLO_DENOMI
+WHERE  REF_NO=M_REF_NO;
+
+DELETE FROM PA_BID_ENTRY_DENOMI
+WHERE  REF_NO=M_REF_NO;
+
+DELETE FROM PA_BID_ALLO
+WHERE  REF_NO=M_REF_NO;
+
+DELETE FROM PA_BID_ENTRY
+WHERE  REF_NO=M_REF_NO;
+END IF;
+
+  COMMIT;
+
+END PA_OENTRY_DEL;
+
+/

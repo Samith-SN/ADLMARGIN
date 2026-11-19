@@ -1,0 +1,58 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_OUTPS_FWD_VALUE_TRNSFER
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_OUTPS_FWD_VALUE_TRNSFER" 
+(
+ M_PROCESS_DATE    DN_SYS_PARAMETER.LAST_DAILY%TYPE
+)
+
+   -- Procedure    : Transfer forward values to relevant places on eff_valdate
+   -- System       : Dealnet system
+   -- Created by   : ITU - D.P. Pubudu Thushara
+   -- Created on   : 09/08/1999
+
+  AS
+
+BEGIN
+
+   UPDATE DN_INV_OUTPS_DEAL_SERIAL_NO
+      SET FACE_VAL     =FWD_PURCHASE,
+          FWD_PURCHASE =0
+   WHERE
+      EFF_VALDATE=M_PROCESS_DATE+1
+      AND
+      FWD_PURCHASE>0 AND
+      SCRIP_STATUS='SC';
+
+--CHANGED CONDITION FROM "EFF_VALDATE=M_PROCESS_DATE" TO "EFF_VALDATE=M_PROCESS_DATE+1"
+--TO AVOID SITUATIONS WHERE THE FORWARD VALUES ESCAPED THE BO INVENTORY RECEIPTS AND
+--ISSUES LOGIC (FORWARD DEAL WITHOUT SERIAL NUMBERS ... SERIAL NUMBER RECEIVED / ISSUED
+--ON EFFECTIVE VALUE DATE)
+--CHANGED BY SM / TDS ON 26/01/2000
+
+
+   UPDATE DN_INV_OUTPS_DEAL_SEC
+      SET FACE_VAL     =FWD_PURCHASE,
+          FWD_PURCHASE =0
+   WHERE
+      EFF_VALDATE=M_PROCESS_DATE+1
+      AND
+      FWD_PURCHASE>0 AND
+      SCRIP_STATUS='SC';
+
+
+   UPDATE DN_INV_OUTPS_DEAL_SEC
+      SET FACE_VAL     =FWD_SALE*(-1),
+          FWD_SALE     =0
+   WHERE
+      EFF_VALDATE=M_PROCESS_DATE+1
+      AND
+      FWD_SALE>0 AND
+      SCRIP_STATUS='SC';
+
+
+END DN_INV_OUTPS_FWD_VALUE_TRNSFER;
+
+/

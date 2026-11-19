@@ -1,0 +1,338 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_REPO_RR_DEAL_SERNO_FO_1
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_REPO_RR_DEAL_SERNO_FO_1" 
+( M_DEAL_NO                 DN_TRN_REPO_ROLLOVER_SEC.DEAL_NO%TYPE,
+  M_PRIOR_DEAL_NO           DN_TRN_REPO_ROLLOVER.PRIOR_DEAL_NO%TYPE,
+  M_LEND_PORTFOLIO_CODE     DN_REF_PORTFOLIO.PORTFOLIO_CODE%TYPE
+ )
+ AS
+
+
+ CURSOR  ROLLOVER_ALLO IS
+     SELECT
+     A.PORTFOLIO_CODE,
+     A.EFF_VALDATE,
+     A.INST_TYPE,
+     A.SECURITY_CODE,
+     A.DEAL_NO,
+     A.SERIAL_NO,
+     A.ALLO_TYPE,
+     A.START_DATE,
+     A.END_DATE,
+     A.ALLO_FACE_VALUE,
+     A.PREV_DEAL_NO
+     FROM DN_INV_REPO_DEAL_SERNO_ALLO A,
+          DN_TRN_REPO_ROLLOVER_SERIAL_NO B
+     WHERE
+        B.DEAL_NO=M_DEAL_NO
+        AND
+        A.PREV_DEAL_NO=M_PRIOR_DEAL_NO
+        AND
+        A.INST_TYPE=B.INST_TYPE
+        AND
+        A.SECURITY_CODE=B.SECURITY_CODE
+        AND
+        A.SERIAL_NO=B.SERIAL_NO
+        AND
+        A.PORTFOLIO_CODE=M_LEND_PORTFOLIO_CODE;
+
+ M_PORTFOLIO_CODE       DN_INV_REPO_DEAL_SERNO_ALLO.PORTFOLIO_CODE%TYPE;
+ M_EFF_VALDATE          DN_INV_REPO_DEAL_SERNO_ALLO.EFF_VALDATE%TYPE;
+ M_INST_TYPE            DN_INV_REPO_DEAL_SERNO_ALLO.INST_TYPE%TYPE;
+ M_SECURITY_CODE        DN_INV_REPO_DEAL_SERNO_ALLO.SECURITY_CODE%TYPE;
+ M_DEAL_NO1             DN_INV_REPO_DEAL_SERNO_ALLO.DEAL_NO%TYPE;
+ M_SERIAL_NO            DN_INV_REPO_DEAL_SERNO_ALLO.SERIAL_NO%TYPE;
+ M_ALLO_TYPE            DN_INV_REPO_DEAL_SERNO_ALLO.ALLO_TYPE%TYPE;
+ M_START_DATE           DN_INV_REPO_DEAL_SERNO_ALLO.START_DATE%TYPE;
+ M_END_DATE             DN_INV_REPO_DEAL_SERNO_ALLO.END_DATE%TYPE;
+ M_ALLO_FACE_VALUE      DN_INV_REPO_DEAL_SERNO_ALLO.ALLO_FACE_VALUE%TYPE;
+ M_PREV_DEAL_NO         DN_INV_REPO_DEAL_SERNO_ALLO.PREV_DEAL_NO%TYPE;
+ M_END_DATE2            DN_TRN_REPO_ROLLOVER.MATURITY_DATE%TYPE; --TO ACCOMODATE NEW DEAL VALUE DATE --VARIABLE INCORRECTLY DEFINED
+ M_END_DATE3            DN_TRN_REPO_ROLLOVER.MATURITY_DATE%TYPE; --ADDED ON 21/02/2001
+ M_CURR_LOCATION        DN_INV_REPO_DEAL_SERIAL_NO.LOCATION%TYPE; --ADDED BY SM TO RECTIFY LOCATION CHANGE PROBLEM
+ M_COUNT                NUMBER;--ADDED ON 21/02/2001
+ M_NEW_DEALNO           DN_TRN_REPO_ROLLOVER.DEAL_NO%TYPE;--ADDED ON 21/02/2001
+
+
+-- PROCEDURE CREATED ON 22-08-2001 //COPPIED FROM CS AND CHANGED.
+-- BY CHAMPIKA
+-- UPDATION OF ALLOCATION OF REVERSE REPO INVENTORY WHEN REV. REPO IS ROLLED OVER
+-- REFINEMENT IDENTIFIED AT CSSL
+
+      BEGIN
+
+       OPEN ROLLOVER_ALLO;
+
+       LOOP
+
+       FETCH  ROLLOVER_ALLO INTO
+         M_PORTFOLIO_CODE,
+         M_EFF_VALDATE,
+         M_INST_TYPE,
+         M_SECURITY_CODE,
+         M_DEAL_NO1,
+         M_SERIAL_NO,
+         M_ALLO_TYPE,
+         M_START_DATE,
+         M_END_DATE,
+         M_ALLO_FACE_VALUE,
+         M_PREV_DEAL_NO;
+
+       EXIT WHEN ROLLOVER_ALLO%NOTFOUND;
+
+--SLECTING NEW DEAL START DATE
+        SELECT  EFF_VALDATE INTO M_END_DATE2 --VARIABLE INCORRECTLY DEFINED
+        FROM DN_TRN_REPO_ROLLOVER
+        WHERE DEAL_NO=M_DEAL_NO;
+
+--SELECTING PREVIOUS DEAL MATURITY DATE --ADDED ON 21/02/2001 --NOT USED !!!
+        IF SUBSTR(M_PRIOR_DEAL_NO,1,2)='RF' THEN
+
+        SELECT MATURITY_DATE
+        INTO M_END_DATE3
+        FROM DN_TRN_REPO_FRESH
+        WHERE DEAL_NO=M_PRIOR_DEAL_NO;
+
+        ELSIF SUBSTR(M_PRIOR_DEAL_NO,1,2)='RR' THEN
+        SELECT MATURITY_DATE
+        INTO M_END_DATE3
+        FROM DN_TRN_REPO_ROLLOVER
+        WHERE DEAL_NO=M_PRIOR_DEAL_NO;
+
+        END IF;
+
+--UPDATING REPO DEAL SERIAL NUMBER TABLE FOR INFORMATION ON OLD DEAL
+--REMARKED BY SM ON 21/02/2001. IT IS NECESSARY TO RETAIN THIS INFORMATION
+ /*
+        UPDATE DN_INV_REPO_DEAL_SERIAL_NO
+        SET    ALLO_REPO=ALLO_REPO-M_ALLO_FACE_VALUE
+        WHERE  PORTFOLIO_CODE=M_LEND_PORTFOLIO_CODE
+               AND
+               INST_TYPE=M_INST_TYPE
+               AND
+               SECURITY_CODE=M_SECURITY_CODE
+               AND
+               DEAL_NO=M_PREV_DEAL_NO
+               AND
+               SERIAL_NO=M_SERIAL_NO; */
+
+--DELETING OLD DEAL INFO FROM ALLO TABLE
+
+ --REMARKED BY SM ON 21/02/2001. IT IS NECESSARY TO RETAIN THIS INFORMATION
+/*        DELETE DN_INV_REPO_DEAL_SERNO_ALLO
+        WHERE
+         PORTFOLIO_CODE=M_PORTFOLIO_CODE
+         AND
+         EFF_VALDATE=M_EFF_VALDATE
+         AND
+         INST_TYPE=M_INST_TYPE
+         AND
+         SECURITY_CODE=M_SECURITY_CODE
+         AND
+         DEAL_NO=M_DEAL_NO1
+         AND
+         SERIAL_NO=M_SERIAL_NO
+         AND
+         ALLO_TYPE=M_ALLO_TYPE
+         AND
+         START_DATE=M_START_DATE
+         AND
+         END_DATE=M_END_DATE
+         AND
+         ALLO_FACE_VALUE=M_ALLO_FACE_VALUE
+         AND
+         PREV_DEAL_NO=M_PREV_DEAL_NO; */
+
+--UPDATING OR INSERTING NEW DEAL INFO TO ALLO TABLE
+
+        UPDATE DN_INV_REPO_DEAL_SERNO_ALLO
+               SET ALLO_FACE_VALUE=M_ALLO_FACE_VALUE,
+                   PREV_DEAL_NO=M_DEAL_NO
+
+               WHERE
+                    PORTFOLIO_CODE=M_PORTFOLIO_CODE
+                    AND
+                    EFF_VALDATE=M_END_DATE2
+                    AND
+                    INST_TYPE= M_INST_TYPE
+                    AND
+                    SECURITY_CODE=M_SECURITY_CODE
+                    AND
+                    DEAL_NO=M_DEAL_NO1
+                    AND
+                    SERIAL_NO=M_SERIAL_NO
+                    AND
+                    ALLO_TYPE= M_ALLO_TYPE
+                    AND
+                    START_DATE=M_END_DATE2
+                    AND
+                    END_DATE=M_END_DATE
+                    AND
+                    PREV_DEAL_NO=M_PRIOR_DEAL_NO;
+
+        IF SQL%NOTFOUND THEN
+
+        INSERT INTO DN_INV_REPO_DEAL_SERNO_ALLO
+                       (PORTFOLIO_CODE,
+                        EFF_VALDATE,
+                        INST_TYPE,
+                        SECURITY_CODE,
+                        DEAL_NO,
+                        SERIAL_NO,
+                        ALLO_TYPE,
+                        START_DATE,
+                        END_DATE,
+                        ALLO_FACE_VALUE,
+                        PREV_DEAL_NO)
+
+                VALUES
+                       (M_PORTFOLIO_CODE,
+                        M_END_DATE2, --M_EFF_VALDATE, REMARKED ON 21/02/2001
+                        M_INST_TYPE,
+                        M_SECURITY_CODE,
+                        M_DEAL_NO1,
+                        M_SERIAL_NO,
+                        M_ALLO_TYPE,
+                        M_END_DATE2, --NEW START DATE--VARIABLE INCORRECTLY DEFINED. SHOULD HAVE BEEN SOMETINHG LIKE "M_VALUE_DATE"
+                        M_END_DATE,
+                        M_ALLO_FACE_VALUE,
+                        M_DEAL_NO);
+
+         END IF;
+
+--UPDATING REPO DEAL SERIAL NUMBER TABLE FOR INFORMATION ON NEW DEAL
+
+        UPDATE DN_INV_REPO_DEAL_SERIAL_NO
+        SET    ALLO_REPO=M_ALLO_FACE_VALUE
+        WHERE  PORTFOLIO_CODE=M_LEND_PORTFOLIO_CODE
+               AND
+               INST_TYPE=M_INST_TYPE
+               AND
+               SECURITY_CODE=M_SECURITY_CODE
+               AND
+               DEAL_NO=M_DEAL_NO
+               AND
+               SERIAL_NO=M_SERIAL_NO;
+
+--ADDED ON 19/02/2001 BY SM
+--IDENTIFYING THE LOCATION OF THE SERIAL NUMBERS RELATING TO THE OLD DEAL
+               SELECT LOCATION
+               INTO M_CURR_LOCATION
+               FROM DN_INV_REPO_DEAL_SERIAL_NO
+
+               WHERE  PORTFOLIO_CODE=M_LEND_PORTFOLIO_CODE
+               AND
+               INST_TYPE=M_INST_TYPE
+               AND
+               SECURITY_CODE=M_SECURITY_CODE
+               AND
+               DEAL_NO=M_PREV_DEAL_NO
+               AND
+               SERIAL_NO=M_SERIAL_NO;
+
+
+--UPDATING THE LOCATION OF THE SERIAL NUMBERS RELATING TO THE NEW DEAL
+              UPDATE DN_INV_REPO_DEAL_SERIAL_NO
+              SET    LOCATION=M_CURR_LOCATION
+              WHERE  PORTFOLIO_CODE=M_LEND_PORTFOLIO_CODE
+               AND
+               INST_TYPE=M_INST_TYPE
+               AND
+               SECURITY_CODE=M_SECURITY_CODE
+               AND
+               DEAL_NO=M_DEAL_NO
+               AND
+               SERIAL_NO=M_SERIAL_NO;
+
+--END OF SECTION ADDED ON 19/02/2001
+
+--UPDATING ALLOCATED REPO DEAL'S "PREV_DEAL_NO" INFORMATION TO OVERCOME WRONG DEAL BEING UPDATED ON ROLLOVER OF REPO DEAL
+
+        IF SUBSTR(M_DEAL_NO1,1,2)='RF' THEN
+        UPDATE DN_TRN_REPO_FRESH_SERIAL_NO
+        SET PREV_DEAL_NO=M_DEAL_NO,
+            LOCATION=M_CURR_LOCATION
+        WHERE
+            DEAL_NO=M_DEAL_NO1
+            AND
+            PREV_DEAL_NO=M_PRIOR_DEAL_NO
+            AND
+            INST_TYPE=M_INST_TYPE
+            AND
+            INV_CODE='RP'
+            AND
+            SECURITY_CODE=M_SECURITY_CODE
+            AND
+            SERIAL_NO=M_SERIAL_NO
+            AND
+            FACE_VALUE=M_ALLO_FACE_VALUE;
+
+        ELSIF SUBSTR(M_DEAL_NO1,1,2)='RR' THEN
+        UPDATE DN_TRN_REPO_ROLLOVER_SERIAL_NO
+        SET PREV_DEAL_NO=M_DEAL_NO,
+            LOCATION=M_CURR_LOCATION
+        WHERE
+            DEAL_NO=M_DEAL_NO1
+            AND
+            PREV_DEAL_NO=M_PRIOR_DEAL_NO
+            AND
+            INST_TYPE=M_INST_TYPE
+            AND
+            INV_CODE='RP'
+            AND
+            SECURITY_CODE=M_SECURITY_CODE
+            AND
+            SERIAL_NO=M_SERIAL_NO
+            AND
+            FACE_VALUE=M_ALLO_FACE_VALUE;
+
+        END IF;
+
+--CHECK TO SEE WHETHER THE PREVIOUS REPO HAS NOW BEEN ROLLED OVER (BUT NOT CONFIRMED);
+
+        SELECT COUNT (*)
+        INTO M_COUNT
+        FROM DN_TRN_REPO_ROLLOVER
+        WHERE
+             PRIOR_DEAL_NO=M_DEAL_NO1
+             AND
+             APP_STATUS <> 'CANCEL';
+
+        IF M_COUNT > 0 THEN
+        SELECT DEAL_NO
+        INTO M_NEW_DEALNO
+        FROM DN_TRN_REPO_ROLLOVER
+        WHERE
+             PRIOR_DEAL_NO=M_DEAL_NO1
+             AND
+             APP_STATUS <> 'CANCEL';
+
+        UPDATE DN_TRN_REPO_ROLLOVER_SERIAL_NO
+        SET PREV_DEAL_NO=M_DEAL_NO,
+            LOCATION=M_CURR_LOCATION
+        WHERE
+            DEAL_NO=M_NEW_DEALNO
+            AND
+            PREV_DEAL_NO=M_PRIOR_DEAL_NO
+            AND
+            INST_TYPE=M_INST_TYPE
+            AND
+            INV_CODE='RP'
+            AND
+            SECURITY_CODE=M_SECURITY_CODE
+            AND
+            SERIAL_NO=M_SERIAL_NO
+            AND
+            FACE_VALUE=M_ALLO_FACE_VALUE;
+
+        END IF;
+
+--
+       END LOOP;
+
+  END  DN_INV_REPO_RR_DEAL_SERNO_FO_1 ;
+
+/

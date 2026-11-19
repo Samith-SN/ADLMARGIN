@@ -1,0 +1,350 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_REPOFRESH_UP1
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_REPOFRESH_UP1" (
+    M_DEAL_NO  IN OUT    DN_TRN_REPO_FRESH.DEAL_NO%TYPE,
+    M_BORROWER_CODE      DN_TRN_REPO_FRESH.BORR_PORTFOLIO_CODE%TYPE,
+    M_LENDER_CODE        DN_TRN_REPO_FRESH.LEND_PORTFOLIO_CODE%TYPE,
+    M_INSTRUMENT         DN_TRN_REPO_FRESH_INST.INST_TYPE%TYPE,
+    M_HAIR_CUT           DN_TRN_REPO_FRESH_INST.RPTRN_HCUT_PER%TYPE,
+    M_SECURITY           DN_TRN_REPO_FRESH.SEC_ALW_LENDER%TYPE,
+    M_PHYSICAL           DN_TRN_REPO_FRESH.PHYSICAL_DELIVERY%TYPE,
+    M_EXCHANGEABILITY    DN_TRN_REPO_FRESH.EXCHANGE_SEC%TYPE,
+    M_CURRENCY           DN_TRN_REPO_FRESH.CURR_CODE%TYPE,
+    M_B_CODE             CHAR,
+    M_VALUE_DATE_TYPE    DN_TRN_REPO_FRESH.EFF_VALDATE_TYPE%TYPE,
+    M_VALUE_DATE         CHAR,
+    M_YIELD              DN_TRN_REPO_FRESH.YIELD%TYPE,
+    M_ON_CALL            DN_TRN_REPO_FRESH.ON_CALL_DEAL%TYPE,
+    M_LEG1               DN_TRN_REPO_FRESH.LEG1_VALUE%TYPE,
+    M_LEG2               DN_TRN_REPO_FRESH.LEG2_VALUE%TYPE,
+    M_MAT_DATE           CHAR,
+    M_TENOR              DN_TRN_REPO_FRESH.TENOR%TYPE,
+    M_INTEREST           DN_TRN_REPO_FRESH.INT_AMOUNT%TYPE,
+    M_USERNAME           DN_TRN_REPO_FRESH.DN_USER%TYPE,
+    M_SELECT_TYPE        CHAR,
+    M_DEAL_NUMBER        DN_TRN_REPO_FRESH.DEAL_NO%TYPE,
+    M_CUST_STAT          DN_TRN_REPO_FRESH.CUSTODIAL_STATUS%TYPE,
+    M_SCRIPT_STAT        DN_TRN_REPO_FRESH.SCRIPT_STATUS%TYPE
+)
+
+AS
+
+   M_USER            DN_TRN_REPO_FRESH.DN_USER%TYPE;
+   M_VAL_DATE        DN_TRN_REPO_FRESH.EFF_VALDATE%TYPE;
+   M_MATU_DATE       DN_TRN_REPO_FRESH.MATURITY_DATE%TYPE;
+   M_BASIS           DN_TRN_REPO_FRESH.INT_RATE_BASE_CODE%TYPE;
+   MM_CURRENCY_VALUE  DN_REF_EXCHANGE_RATES.CURRENCY_VALUE%TYPE;--CURRENCY
+
+BEGIN
+
+--RAISE_APPLICATION_ERROR(-20201,M_SCRIPT_STAT);
+
+
+    -- PROCEDURE  -  TO UPDATE REPOS FRESH DETAILS
+    -- SYSTEM     -  MBFSL SYSTEM
+    -- CREATED BY -  V.THILAKESAN.
+    -- CREATED ON -  14/08/1999
+    -- MODIFIED BY -  V.SUKATHIS.
+    -- MODIFIED ON -  27/1/2000
+
+    --IF SUBSTR(M_USERNAME,1,1)=' ' OR M_USERNAME IS NULL THEN
+    --   M_USER:='Un Identify';
+    --ELSE
+    --   M_USER:=M_USERNAME;
+    --END IF;
+
+    --Select the value date
+    IF M_VALUE_DATE_TYPE<>'UD' THEN
+       SELECT DN_FIN_EFF_VALDATE(M_VALUE_DATE_TYPE) INTO M_VAL_DATE FROM DUAL;
+    ELSE
+       SELECT TO_DATE(M_VALUE_DATE,'DD/MM/YYYY') INTO M_VAL_DATE FROM DUAL;
+    END IF;
+    --Select the maturity date
+    SELECT TO_DATE(M_MAT_DATE,'DD/MM/YYYY') INTO M_MATU_DATE FROM DUAL;
+    --Select the base code
+    SELECT
+      INT_RATE_BASE_CODE
+    INTO
+      M_BASIS
+    FROM DN_REF_INTR_BASE
+    WHERE INTR_BASE_DESC=M_B_CODE;
+
+    IF M_DEAL_NO IS NOT NULL AND M_SELECT_TYPE='MAIN1' THEN
+
+               -- DN_LIMIT_TRN_OVRL_EXPO(M_DEAL_NO,'U'); -- Modified by Sukathis
+                DN_LIMIT_TRN_OVRL(M_DEAL_NO,'U'); -- Modified by Sukathis
+                DN_LIMIT_TRN_OVRL_EXPO(M_DEAL_NO,'U'); -- Modified by Sukathis
+                DN_LIMIT_TRN_OVRL_MATU(M_DEAL_NO,'U');
+                DN_LIMIT_TRN_ISSUER_INST_AMT(M_DEAL_NO,'U');--added by nirmala
+                DN_LIMIT_TRN_ISSUER_INST_MAT(M_DEAL_NO,'U');--added by nirmala
+                DN_LIMIT_TRN_ISS_HOL_PERIOD(M_DEAL_NO,'U');--added by nirmala
+
+                --DN_LIMIT_TRN_DEALER_INST_AMT(M_DEAL_NO,'U');--added by nirmala
+
+
+IF M_CURRENCY<>'SLR' THEN --CURRENCY
+-------------------------------------------CURRENCY
+SELECT  CURRENCY_VALUE
+INTO    MM_CURRENCY_VALUE
+FROM    DN_REF_EXCHANGE_RATES
+WHERE   CURR_CODE=M_CURRENCY;
+
+ /*INSERT INTO DN_TRN_DEAL_CURRENCY
+  (DEAL_NO,LEG1_VALUE,LEG2_VALUE,CURR_CODE)
+ VALUES
+  (M_DEAL_NO,M_LEG1,M_LEG2,M_CURRENCY);*/
+
+  UPDATE DN_TRN_DEAL_CURRENCY
+SET    LEG1_VALUE=M_LEG1,
+       LEG2_VALUE=M_LEG2,
+       CURR_CODE=M_CURRENCY
+WHERE  DEAL_NO=M_DEAL_NO;
+
+----------------------------------------------CURRENCY
+    UPDATE DN_TRN_REPO_FRESH
+       SET BORR_PORTFOLIO_CODE=M_BORROWER_CODE,
+           LEND_PORTFOLIO_CODE=M_LENDER_CODE,
+           SEC_ALW_LENDER     =M_SECURITY,
+           PHYSICAL_DELIVERY  =M_PHYSICAL,
+           EXCHANGE_SEC       =M_EXCHANGEABILITY,
+           CURR_CODE          =M_CURRENCY,
+           INT_RATE_BASE_CODE =M_BASIS,
+           EFF_VALDATE_TYPE   =M_VALUE_DATE_TYPE,
+           EFF_VALDATE        =M_VAL_DATE,
+           YIELD              =M_YIELD,
+           ON_CALL_DEAL       =M_ON_CALL,
+           LEG1_VALUE         =M_LEG1*MM_CURRENCY_VALUE,--CURRENCY
+           LEG2_VALUE         =M_LEG2*MM_CURRENCY_VALUE,--CURRENCY
+           MATURITY_DATE      =M_MATU_DATE,
+           TENOR              =M_TENOR,
+           INT_AMOUNT         =(M_LEG2*MM_CURRENCY_VALUE-M_LEG1*MM_CURRENCY_VALUE),--CURRENCY --M_INTEREST,
+           DN_USER            =M_USERNAME,
+           APP_STATUS         ='APPRO2'
+       WHERE
+           DEAL_NO=M_DEAL_NO AND
+           APP_STATUS NOT IN ('CONF','CANCEL');--AND
+           --SCRIPT_STATUS=M_SCRIPT_STAT;
+
+     IF SQL%NOTFOUND THEN
+          INSERT INTO DN_TRN_REPO_FRESH
+          (DEAL_NO,
+           BORR_PORTFOLIO_CODE,
+           LEND_PORTFOLIO_CODE,
+           SEC_ALW_LENDER,
+           PHYSICAL_DELIVERY,
+           EXCHANGE_SEC,
+           CURR_CODE,
+           INT_RATE_BASE_CODE,
+           EFF_VALDATE_TYPE,
+           EFF_VALDATE,
+           YIELD,
+           ON_CALL_DEAL,
+           LEG1_VALUE,
+           LEG2_VALUE,
+           MATURITY_DATE,
+           TENOR,
+           INT_AMOUNT,
+           DN_USER,
+           APP_STATUS,
+           SCRIPT_STATUS)
+           VALUES(
+             M_DEAL_NO,
+             M_BORROWER_CODE,
+             M_LENDER_CODE,
+             M_SECURITY,
+             M_PHYSICAL,
+             M_EXCHANGEABILITY,
+             M_CURRENCY,
+             M_BASIS,
+             M_VALUE_DATE_TYPE,
+             M_VAL_DATE,
+             M_YIELD,
+             M_ON_CALL,
+             M_LEG1*MM_CURRENCY_VALUE,--CURRENCY
+             M_LEG2*MM_CURRENCY_VALUE,--CURRENCY
+             M_MATU_DATE,
+             M_TENOR,
+             M_LEG2*MM_CURRENCY_VALUE-M_LEG1*MM_CURRENCY_VALUE, --CURRENCY --M_INTEREST,
+             M_USERNAME,
+             'APPRO2',
+             M_SCRIPT_STAT);
+ END IF;
+
+--***************ADDED FOR TIME LOG REQUIREMRNT  BY S.YASODHA****************
+INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USERNAME,
+              SYSDATE,
+              'MODIFICATION'
+           );
+--   *******************************************************
+
+
+ELSE --CURRENCY
+
+       UPDATE DN_TRN_REPO_FRESH
+       SET BORR_PORTFOLIO_CODE=M_BORROWER_CODE,
+           LEND_PORTFOLIO_CODE=M_LENDER_CODE,
+           SEC_ALW_LENDER     =M_SECURITY,
+           PHYSICAL_DELIVERY  =M_PHYSICAL,
+           EXCHANGE_SEC       =M_EXCHANGEABILITY,
+           CURR_CODE          =M_CURRENCY,
+           INT_RATE_BASE_CODE =M_BASIS,
+           EFF_VALDATE_TYPE   =M_VALUE_DATE_TYPE,
+           EFF_VALDATE        =M_VAL_DATE,
+           YIELD              =M_YIELD,
+           ON_CALL_DEAL       =M_ON_CALL,
+           LEG1_VALUE         =M_LEG1,
+           LEG2_VALUE         =M_LEG2,
+           MATURITY_DATE      =M_MATU_DATE,
+           TENOR              =M_TENOR,
+           INT_AMOUNT         =M_INTEREST,
+           DN_USER            =M_USERNAME,
+           APP_STATUS         ='APPRO2'
+       WHERE
+           DEAL_NO=M_DEAL_NO AND
+           APP_STATUS NOT IN ('CONF','CANCEL');--AND
+           --SCRIPT_STATUS=M_SCRIPT_STAT;
+
+
+       IF SQL%NOTFOUND THEN
+          INSERT INTO DN_TRN_REPO_FRESH
+          (DEAL_NO,
+           BORR_PORTFOLIO_CODE,
+           LEND_PORTFOLIO_CODE,
+           SEC_ALW_LENDER,
+           PHYSICAL_DELIVERY,
+           EXCHANGE_SEC,
+           CURR_CODE,
+           INT_RATE_BASE_CODE,
+           EFF_VALDATE_TYPE,
+           EFF_VALDATE,
+           YIELD,
+           ON_CALL_DEAL,
+           LEG1_VALUE,
+           LEG2_VALUE,
+           MATURITY_DATE,
+           TENOR,
+           INT_AMOUNT,
+           DN_USER,
+           APP_STATUS,
+           SCRIPT_STATUS)
+           VALUES(
+             M_DEAL_NO,
+             M_BORROWER_CODE,
+             M_LENDER_CODE,
+             M_SECURITY,
+             M_PHYSICAL,
+             M_EXCHANGEABILITY,
+             M_CURRENCY,
+             M_BASIS,
+             M_VALUE_DATE_TYPE,
+             M_VAL_DATE,
+             M_YIELD,
+             M_ON_CALL,
+             M_LEG1,
+             M_LEG2,
+             M_MATU_DATE,
+             M_TENOR,
+             M_INTEREST,
+             M_USERNAME,
+             'APPRO2',
+             M_SCRIPT_STAT);
+
+
+
+       END IF;
+
+--***************ADDED FOR TIME LOG REQUIREMRNT  BY S.YASODHA****************
+INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USERNAME,
+              SYSDATE,
+              'MODIFICATION'
+           );
+--   *******************************************************
+
+
+ END IF; --CURRENCY
+
+
+      -- DN_LIMIT_TRN_OVRL_EXPO(M_DEAL_NO,'I'); -- Modified by Sukathis
+            DN_LIMIT_TRN_OVRL_MATU(M_DEAL_NO,'I');--ADD BY DAYAN TO RUN TRANSACTION PROCEDURE
+            DN_LIMIT_TRN_OVRL(M_DEAL_NO,'I');-- Modified by Sukathis
+            DN_LIMIT_TRN_OVRL_EXPO(M_DEAL_NO,'I');-- Modified by Sukathis
+            DN_LIMIT_TRN_ISSUER_INST_AMT(M_DEAL_NO,'I');--added by nirmala
+            DN_LIMIT_TRN_ISSUER_INST_MAT(M_DEAL_NO,'I');--added by nirmala
+            DN_LIMIT_TRN_ISS_HOL_PERIOD(M_DEAL_NO,'I');--added by nirmala
+           -- DN_LIMIT_TRN_DEALER_INST_AMT(M_DEAL_NO,'I');--added by nirmala
+
+
+
+
+       --Periodic interest Calculation
+       --DN_PERIODIC_INTEREST_CAL(M_DEAL_NO,M_LEG1,M_YIELD,M_TENOR,M_BASIS,M_VAL_DATE);
+
+   END IF;
+   IF M_DEAL_NO IS NOT NULL AND M_INSTRUMENT<>'NULL' AND M_SELECT_TYPE='MAIN2' THEN
+      IF M_INSTRUMENT IS NOT NULL THEN
+         UPDATE DN_TRN_REPO_FRESH_INST
+         SET RPTRN_HCUT_PER=M_HAIR_CUT
+         WHERE
+            DEAL_NO=M_DEAL_NO
+            AND
+            INST_TYPE=M_INSTRUMENT;
+
+         IF SQL%NOTFOUND THEN
+            INSERT INTO DN_TRN_REPO_FRESH_INST
+              (DEAL_NO,
+               INST_TYPE,
+               RPTRN_HCUT_PER)
+            VALUES(M_DEAL_NO,
+                   M_INSTRUMENT,
+                   M_HAIR_CUT);
+         END IF;
+      END IF;
+   END IF;
+ /*IF M_SELECT_TYPE='MAIN2' THEN
+ DN_CHECK_FIGURES_RF(M_DEAL_NO,'1');
+END IF;*/
+
+  COMMIT;
+   --If the data type is incorrect then delete the records from the relavent tables
+
+ EXCEPTION
+ WHEN OTHERS THEN
+
+ ROLLBACK;
+
+  --COMMIT;
+
+ RAISE_APPLICATION_ERROR(-20201,SQLCODE||SQLERRM||'MBFSL_REPOFRESH_UP1');
+   --If the data type is incorrect then delete the records from the relavent tables
+
+ --EXCEPTION
+ --WHEN OTHERS THEN
+--
+ -- ROLLBACK;
+
+  --COMMIT;
+
+    --RAISE_APPLICATION_ERROR(-20201,'Cannot update records, because of incorrect data type.');
+
+END MBFSL_REPOFRESH_UP1;
+
+/

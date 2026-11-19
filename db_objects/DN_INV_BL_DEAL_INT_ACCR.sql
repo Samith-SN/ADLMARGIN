@@ -1,0 +1,220 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_INV_BL_DEAL_INT_ACCR
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_INV_BL_DEAL_INT_ACCR" 
+(
+ M_PROCESS_DATE    DN_SYS_PARAMETER.LAST_DAILY%TYPE
+)
+
+   -- Procedure    : Calculate interest acc. from B/L deal
+   -- System       : Dealnet system
+   -- Created by   : ITU - D.P. Pubudu Thushara
+   -- Created on   : 20/08/1999
+   -- Modified on  : 06/09/1999
+
+  AS
+
+  CURSOR INT_BL_DEAL IS
+     SELECT
+        A.DEAL_NO,
+        A.BORR_PORTFOLIO_CODE,
+        A.LEND_PORTFOLIO_CODE,
+        (M_PROCESS_DATE-A.EFF_VALDATE)+1,
+        A.LEG1_VALUE,
+        A.YEILD_PER_NSLTT, --CHANGED FROM 'A.YEILD_PER_NET'
+        A.INT_ACCR,
+        DECODE(B.DENOMINATOR,'Act',(ADD_MONTHS(EFF_VALDATE,12)-EFF_VALDATE),B.DENOMINATOR),
+        A.YEILD_PER_NET, --NEW
+        A.NSLTT_ACCR --NEW
+     FROM
+        DN_TRN_BL_FUND A,
+        DN_REF_INTR_BASE B
+     WHERE
+        A.EFF_VALDATE<=M_PROCESS_DATE
+        AND
+        A.MATURITY_DATE>M_PROCESS_DATE
+        AND
+        A.APP_STATUS='CONF'
+        AND
+        A.INT_RATE_BASE_CODE=B.INT_RATE_BASE_CODE;
+
+  CURSOR INT_BL_SEC_DEAL IS
+     SELECT
+        A.DEAL_NO,
+        A.BORR_PORTFOLIO_CODE,
+        A.LEND_PORTFOLIO_CODE,
+        (M_PROCESS_DATE-A.EFF_VALDATE)+1,
+        A.FEE_AMOUNT,
+        A.TENOR,
+        A.INT_ACCR,
+        A.FEE_ACCR
+     FROM
+        DN_TRN_BL_SECURITY A
+     WHERE
+        A.EFF_VALDATE<=M_PROCESS_DATE
+        AND
+        A.MATURITY_DATE>M_PROCESS_DATE
+        AND
+        A.APP_STATUS='CONF';
+
+
+   M_DEAL_NO              DN_TRN_BL_FUND.DEAL_NO%TYPE;
+   M_BORR_PORTFOLIO_CODE  DN_TRN_BL_FUND.BORR_PORTFOLIO_CODE%TYPE;
+   M_LEND_PORTFOLIO_CODE  DN_TRN_BL_FUND.LEND_PORTFOLIO_CODE%TYPE;
+   M_DATE_DIFF            NUMBER;
+   M_LEG1_VALUE           DN_TRN_BL_FUND.LEG1_VALUE%TYPE;
+   M_YEILD                DN_TRN_BL_FUND.YEILD_PER_NSLTT%TYPE;
+   M_YEILD_NET            DN_TRN_BL_FUND.YEILD_PER_NET%TYPE; --NEW
+   M_INT_ACCR             DN_TRN_BL_FUND.INT_ACCR%TYPE;
+   M_FEE_ACCR             DN_TRN_BL_SECURITY.INT_ACCR%TYPE;
+   M_FEE_AMOUNT           DN_TRN_BL_SECURITY.FEE_AMOUNT%TYPE;
+   M_TENOR                DN_TRN_BL_SECURITY.TENOR%TYPE;
+   M_DENOMINATOR          DN_REF_INTR_BASE.DENOMINATOR%TYPE;
+   M_NSLTT_ACCR           DN_TRN_BL_FUND.NSLTT_ACCR%TYPE;
+   M_NSLTT_VALUE          NUMBER;
+   M_LEND_PF_TYPE         DN_REF_PORTFOLIO.PF_TYPE%TYPE;
+
+BEGIN
+
+   M_NSLTT_VALUE:=0;
+   OPEN INT_BL_DEAL;
+
+   LOOP
+
+      FETCH  INT_BL_DEAL INTO
+
+      M_DEAL_NO, M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+      M_DATE_DIFF, M_LEG1_VALUE, M_YEILD, M_INT_ACCR, M_DENOMINATOR,
+      M_YEILD_NET,M_NSLTT_ACCR; --NEW
+
+      EXIT WHEN INT_BL_DEAL%NOTFOUND;
+
+--NEW SECTION ADDED ON 04/01/2001
+      SELECT PF_TYPE
+      INTO M_LEND_PF_TYPE
+      FROM DN_REF_PORTFOLIO
+      WHERE PORTFOLIO_CODE = M_LEND_PORTFOLIO_CODE;
+--END OF NEW SECTION
+
+      IF ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR)>0 THEN
+
+--NEW SECTION
+      IF M_LEND_PF_TYPE='P' THEN
+      M_NSLTT_VALUE := (
+                       ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF))-
+                       ((((M_LEG1_VALUE*M_YEILD_NET)/M_DENOMINATOR)*M_DATE_DIFF)) )
+                        -M_NSLTT_ACCR;
+      END IF;
+
+--END OF NEW SECTION
+
+          INSERT INTO DN_INV_INT_BL_DEAL
+            (PROCESS_DATE,
+             DEAL_NO,
+             BORR_PORTFOLIO_CODE,
+             LEND_PORTFOLIO_CODE,
+             INT_ACCR,
+             NSL_TT
+             )
+            VALUES
+            (M_PROCESS_DATE,
+             M_DEAL_NO,
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+             ((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),
+             M_NSLTT_VALUE
+             );
+
+          UPDATE DN_TRN_BL_FUND
+           SET INT_ACCR=INT_ACCR+((((M_LEG1_VALUE*M_YEILD)/M_DENOMINATOR)*M_DATE_DIFF)-M_INT_ACCR),
+               NSLTT_ACCR=NSLTT_ACCR+M_NSLTT_VALUE
+          WHERE
+             DEAL_NO=M_DEAL_NO;
+
+      END IF;
+
+    END LOOP;
+
+
+   OPEN INT_BL_SEC_DEAL;
+
+   LOOP
+
+      FETCH  INT_BL_SEC_DEAL INTO
+
+      M_DEAL_NO, M_BORR_PORTFOLIO_CODE,M_LEND_PORTFOLIO_CODE,
+      M_DATE_DIFF, M_FEE_AMOUNT, M_TENOR, M_INT_ACCR,M_FEE_ACCR;
+
+      EXIT WHEN INT_BL_SEC_DEAL%NOTFOUND;
+
+
+      IF (((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_INT_ACCR)>0  THEN
+
+          INSERT INTO DN_INV_INT_BL_DEAL
+            (PROCESS_DATE,
+             DEAL_NO,
+             BORR_PORTFOLIO_CODE,
+             LEND_PORTFOLIO_CODE,
+--             INT_ACCR,
+             FEE_ACCR
+             )
+            VALUES
+            (M_PROCESS_DATE,
+             M_DEAL_NO,
+             M_BORR_PORTFOLIO_CODE,
+             M_LEND_PORTFOLIO_CODE,
+--             (((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_INT_ACCR),
+             (((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)
+             );
+
+          UPDATE DN_TRN_BL_SECURITY
+           SET --INT_ACCR=INT_ACCR+(((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_INT_ACCR),
+               FEE_ACCR=FEE_ACCR+(((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)
+          WHERE
+             DEAL_NO=M_DEAL_NO;
+
+      END IF;
+
+      IF (((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)>0  THEN
+
+
+          UPDATE DN_INV_INT_BL_DEAL
+             SET FEE_ACCR=(((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)
+          WHERE
+             PROCESS_DATE=M_PROCESS_DATE
+             AND
+             DEAL_NO=M_DEAL_NO;
+
+          IF SQL%NOTFOUND THEN
+
+             INSERT INTO DN_INV_INT_BL_DEAL
+               (PROCESS_DATE,
+                DEAL_NO,
+                BORR_PORTFOLIO_CODE,
+                LEND_PORTFOLIO_CODE,
+                FEE_ACCR
+                )
+             VALUES
+               (M_PROCESS_DATE,
+                M_DEAL_NO,
+                M_BORR_PORTFOLIO_CODE,
+                M_LEND_PORTFOLIO_CODE,
+                (((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)
+               );
+
+          END IF;
+
+          UPDATE DN_TRN_BL_SECURITY
+           SET FEE_ACCR=FEE_ACCR+(((M_FEE_AMOUNT/M_TENOR)*M_DATE_DIFF)-M_FEE_ACCR)
+          WHERE
+             DEAL_NO=M_DEAL_NO;
+
+      END IF;
+
+    END LOOP;
+
+END DN_INV_BL_DEAL_INT_ACCR;
+
+/

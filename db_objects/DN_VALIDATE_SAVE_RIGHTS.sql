@@ -1,0 +1,69 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_VALIDATE_SAVE_RIGHTS
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_VALIDATE_SAVE_RIGHTS" 
+(
+ M_USER                 VARCHAR2,
+ M_SCRNAME              DN_REF_SCREEN_URL.DN_SCREEN_NAME%TYPE
+)
+AS
+
+--M_ROLE_NAME          VARCHAR2(40);
+M_COUNT                NUMBER;
+M_MIN                NUMBER:=0;
+
+BEGIN
+
+--created by ashini on 31/10/2005 for sr0509-047
+
+   SELECT
+    COUNT (*)
+    INTO M_COUNT
+    FROM DN_REF_USER_VIEW_ACCESS
+    WHERE DN_USER     = M_USER AND
+          SCREEN_NAME = M_SCRNAME AND
+          SAVE_STATUS = 'Y';
+  SELECT
+  DECODE(ACTIVE_STATUS,'Y',(SYSDATE-LOGIN_DATE)*24*60,'N',100) INTO M_MIN
+  FROM DN_REF_USER_STATUS
+  WHERE  DN_USER = M_USER ;
+
+  IF M_MIN >=60*24 THEN  --60*24
+
+   --DN_UNAUTHORIZED_LOGIN_LOG(M_USER,M_SCRNAME);
+    UPDATE DN_REF_USER_STATUS
+    SET    ACTIVE_STATUS= 'N'
+    WHERE  DN_USER = M_USER;
+    M_COUNT :=0;
+    COMMIT;
+    dbms_output.put_line('''''');
+     RAISE_APPLICATION_ERROR(-20201,'YOU HAVE BEEN INACTIVE IN THE SYSTEM IN EXCESS OF THE STIPULATED TIME AND THEREFORE YOU ARE NOT AUTHORISED TO EXECUTE THIS TRANSACTION. PLEASE LOGOUT AND RE-LOGIN.');
+  ELSE
+
+  UPDATE DN_REF_USER_STATUS
+    SET    LOGIN_DATE   = SYSDATE,
+           LOGIN_SCREEN = M_SCRNAME,
+           ACTIVE_STATUS= 'Y'
+    WHERE  DN_USER = M_USER;
+      dbms_output.put_line('M_SCRNAME---'|| M_SCRNAME);
+
+ END IF;
+    IF M_COUNT=0 THEN
+       M_COUNT:=0;
+       RAISE_APPLICATION_ERROR(-20201,'INSUFFICIENT PRIVILEGES CANNOT SAVE!');
+    ELSE
+       UPDATE DN_REF_USER_STATUS
+       SET    LOGIN_DATE   = SYSDATE,
+              LOGIN_SCREEN = M_SCRNAME,
+              ACTIVE_STATUS= 'Y'
+       WHERE  DN_USER = M_USER;
+       dbms_output.put_line('M_SCRNAME-///'|| M_SCRNAME);
+
+
+    END IF;
+
+END DN_VALIDATE_SAVE_RIGHTS;
+
+/

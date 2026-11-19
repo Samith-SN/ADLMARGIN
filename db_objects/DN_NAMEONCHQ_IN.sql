@@ -1,0 +1,59 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_NAMEONCHQ_IN
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_NAMEONCHQ_IN" 
+
+    (   M_PORTFOLIO_CODE            DN_REF_CHEQUE_NAME.PORTFOLIO_CODE%TYPE,
+        M_PF_NAME                   DN_REF_CHEQUE_NAME.PF_NAME%TYPE,
+        M_CHEQUE_NAME               DN_REF_CHEQUE_NAME.CHEQUE_NAME%TYPE
+    )
+
+AS
+M_COUNT               NUMBER;
+
+BEGIN
+/* PROCEDURE  - TO SAVE CHEQUE NAMES
+   SYSTEM     - DEALNET
+   CREATED BY - GAYAN
+   CREATED ON -  10/03/2001 */
+SELECT
+COUNT(*)
+INTO M_COUNT
+FROM
+DN_REF_CHEQUE_NAME
+WHERE
+PORTFOLIO_CODE = M_PORTFOLIO_CODE;
+
+IF M_COUNT=0 THEN
+
+    INSERT INTO DN_REF_CHEQUE_NAME
+        (PORTFOLIO_CODE,
+         PF_NAME,
+         CHEQUE_NAME
+         )
+         VALUES(
+            M_PORTFOLIO_CODE,
+            M_PF_NAME,
+            M_CHEQUE_NAME);
+
+
+
+END IF;
+
+IF  M_COUNT<>0  THEN
+
+   UPDATE DN_REF_CHEQUE_NAME
+       SET CHEQUE_NAME=M_CHEQUE_NAME
+   WHERE
+       PORTFOLIO_CODE=M_PORTFOLIO_CODE;
+
+END IF;
+
+COMMIT;
+
+
+END DN_NAMEONCHQ_IN;
+
+/

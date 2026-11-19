@@ -1,0 +1,55 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_BANK_CHARGE_DELETION
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_BANK_CHARGE_DELETION" 
+(M_DEAL_NO     DN_TRN_REPO_FRESH.DEAL_NO%TYPE,
+ M_USER        DN_TIME_LOG.DN_USER%TYPE
+ )
+
+AS
+
+ERR_NUM             VARCHAR2(200);
+ERR_MSG             VARCHAR2(200);
+M_SUS_REF_NO        DN_TRN_BO_SETTL_RECEIPT.SUS_REF_NO%TYPE;
+M_PAY_AMOUNT        DN_TRN_BO_SETTL_PAYMENT.PAY_AMOUNT%TYPE;
+M_REC_AMOUNT        DN_TRN_BO_SETTL_RECEIPT.REC_AMOUNT%TYPE;
+
+BEGIN
+
+
+DN_VALIDATE_SAVE_RIGHTS(M_USER,'WD_BankCharge_Deletion');  --added by ashini on 31/10/2005 for sr0509-047
+
+
+
+DELETE DN_ACC_LICENCEE_GEN_ACCOUNT WHERE DOCREFNO =M_DEAL_NO;
+DELETE DN_TRN_BO_BANK_CHARG WHERE DOCREFNO =M_DEAL_NO;
+
+INSERT INTO DN_TIME_LOG
+           (SUS_REF_NO,
+            DN_USER,
+            ENT_DATE,
+            DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USER,
+              SYSDATE,
+              'BANK CHARGE DELETE OPTION'
+             );
+
+
+COMMIT;
+
+
+--------EXCEPTION
+EXCEPTION WHEN OTHERS THEN
+ROLLBACK;
+   ERR_NUM :=  substr(SQLCODE,1,15);
+   ERR_MSG :=  substr(SQLERRM,1,200) ;
+   RAISE_APPLICATION_ERROR(-20201,SQLCODE||SQLERRM);
+
+END ;
+
+/

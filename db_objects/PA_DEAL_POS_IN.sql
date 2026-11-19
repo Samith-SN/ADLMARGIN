@@ -1,0 +1,544 @@
+--------------------------------------------------------
+--  DDL for Procedure PA_DEAL_POS_IN
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."PA_DEAL_POS_IN" (
+        M_DEAL_NO          IN OUT    DN_TRN_OUTP_SALE.DEAL_NO%TYPE,
+        M_AUCTION_DATE               VARCHAR2,
+        M_INST_TYPE                  PA_AUCTION_REFERENCE.INST_TYPE%TYPE,
+        M_SECURITY_CODE              PA_AUCTION_REFERENCE.SECURITY_CODE%TYPE,
+        M_ISSUER_CODE                PA_AUCTION_REFERENCE.ISSUER_CODE%TYPE,
+        M_PORTFOLIO_CODE             PA_AUCTION_REFERENCE.PORTFOLIO_CODE%TYPE,
+        M_ENTERED_BY                 VARCHAR2,
+        M_SELECT_TYPE                VARCHAR2)
+
+AS
+CURSOR DEAL_DETAIL IS
+   SELECT
+       CUT_OFF_PRICE,FACE_VALUE,COST,ACC_INT_TOTAL,SETTLE_VALUE
+   FROM
+       PA_AUCTION_DETAILS
+   WHERE
+       AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+       INST_TYPE       =M_INST_TYPE AND
+       ISSUER_CODE     =M_ISSUER_CODE AND
+       SECURITY_CODE   =M_SECURITY_CODE AND
+       PORTFOLIO_CODE  =M_PORTFOLIO_CODE
+   ORDER BY CUT_OFF_PRICE;
+
+ CURSOR BID_DETAIL IS
+   SELECT
+       REF_NO
+   FROM
+       PA_BID_ENTRY
+   WHERE
+       AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+       INST_TYPE       =M_INST_TYPE AND
+       ISSUER_CODE     =M_ISSUER_CODE AND
+       SECURITY_CODE   =M_SECURITY_CODE AND
+       PORTFOLIO_CODE  =M_PORTFOLIO_CODE
+   ORDER BY REF_NO;
+
+ CURSOR BID_DETAIL2 IS
+   SELECT
+       REF_NO
+   FROM
+       PA_BID_ENTRY
+   WHERE
+       AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+       INST_TYPE       =M_INST_TYPE AND
+       ISSUER_CODE     =M_ISSUER_CODE AND
+       SECURITY_CODE   =M_SECURITY_CODE AND
+       PORTFOLIO_CODE  =M_PORTFOLIO_CODE
+   ORDER BY REF_NO;
+
+M_REF_NO                    PA_BID_ENTRY.REF_NO%TYPE;
+
+M_SDATE                     PA_AUCTION_REFERENCE.ENTERED_DATE%TYPE;
+M_BID_INT_RATE_BASE_CODE    PA_AUCTION_REFERENCE.BID_INT_RATE_BASE_CODE%TYPE;
+M_SELLER_CODE               PA_AUCTION_REFERENCE.SELLER_CODE%TYPE;
+
+M_CUT_OFF_PRICE             PA_AUCTION_DETAILS.CUT_OFF_PRICE%TYPE;
+M_FACE_VALUE                PA_AUCTION_DETAILS.FACE_VALUE%TYPE;
+M_COST                      PA_AUCTION_DETAILS.COST%TYPE;
+M_ACC_INT_TOTAL             PA_AUCTION_DETAILS.ACC_INT_TOTAL%TYPE;
+M_SETTLE_VALUE              PA_AUCTION_DETAILS.SETTLE_VALUE%TYPE;
+
+M_YIELD                     DN_TRN_OUTP_SALE.YIELD%TYPE;
+MM_YIELD                    DN_TRN_OUTP_SALE.YIELD%TYPE;
+M_DIRTY                     DN_TRN_OUTP_SALE.PRICE_DIRTY%TYPE;
+
+M_BIDDER_CODE               PA_BID_ENTRY.BIDDER_CODE%TYPE;
+M_CLIENT_INT_RATE_BASE_CODE PA_BID_ENTRY.CLIENT_INT_RATE_BASE_CODE%TYPE;
+M_CLIENT_YIELD              PA_BID_ENTRY.CLIENT_YIELD%TYPE;
+M_CLIENT_PRICE_CLEAN        PA_BID_ENTRY.CLIENT_PRICE_CLEAN%TYPE;
+M_CLIENT_PRICE_DIRTY        PA_BID_ENTRY.CLIENT_PRICE_DIRTY%TYPE;
+M_CLIENT_FACE_VALUE         PA_BID_ENTRY.CLIENT_FACE_VALUE%TYPE;
+M_CLIENT_COST               PA_BID_ENTRY.CLIENT_COST%TYPE;
+M_CLIENT_ACC_INT            PA_BID_ENTRY.CLIENT_ACC_INT%TYPE;
+M_CLIENT_SETTLE_VALUE       PA_BID_ENTRY.CLIENT_SETTLE_VALUE%TYPE;
+
+MM_BID_INT_RATE_BASE_CODE    PA_BID_ENTRY.BID_INT_RATE_BASE_CODE%TYPE;
+M_BID_YIELD                 PA_BID_ENTRY.BID_YIELD%TYPE;
+M_BID_PRICE_CLEAN           PA_BID_ENTRY.BID_PRICE_CLEAN%TYPE;
+M_BID_PRICE_DIRTY           PA_BID_ENTRY.BID_PRICE_DIRTY%TYPE;
+M_BID_FACE_VALUE            PA_BID_ENTRY.BID_FACE_VALUE%TYPE;
+M_BID_COST                  PA_BID_ENTRY.BID_COST%TYPE;
+M_BID_ACC_INT               PA_BID_ENTRY.BID_ACC_INT%TYPE;
+M_BID_SETTLE_VALUE          PA_BID_ENTRY.BID_SETTLE_VALUE%TYPE;
+
+BEGIN
+
+/*RAISE_APPLICATION_ERROR(-20201,M_PORTFOLIO_CODE ||' '||M_OWNED_BY_MBFSL||' '||M_CP_PORTFOLIO_CODE||' '||M_PF_NAME||' '||M_ADD_IDENTIFICATION||' '||M_ADD_LOCATION||' '||M_ADD_STREET||' '||M_ADD_CITY||' '||M_ADD_COUNTRY||' ' ||M_POSTAL_CODE||' '||M_DATE_INC_BIRTH||' '||M_BUSI_REG_NIC||' '||M_CATEGORY_ENTITY||' '||M_NATURE_OCCUPATION ||' '||M_SECT_CODE ||' '||M_MBFSL_SECT_CODE||' '||M_NEST_REVIEW );*/
+
+
+    /* PROCEDURE  -  TO SAVE PRIMARY AUCTION DEAL PROCESS SCREEN
+       SYSTEM     -  DEALNET
+       CREATED BY -  LATHIKA
+       MODIFIED ON - 10/12/1999 */
+
+
+IF M_AUCTION_DATE IS NOT NULL  AND M_SELECT_TYPE='MAIN1' THEN
+
+--changing auction_status-in PA_AUCTION_REFERENCE table-------
+ UPDATE PA_AUCTION_REFERENCE
+         SET AUCTION_STATUS   ='C'
+       WHERE
+            AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+            INST_TYPE       =M_INST_TYPE AND
+            ISSUER_CODE     =M_ISSUER_CODE AND
+            SECURITY_CODE   =M_SECURITY_CODE AND
+            PORTFOLIO_CODE  =M_PORTFOLIO_CODE ;
+
+----selecting  sysdate--------
+ SELECT
+       SYSDATE
+   INTO
+       M_SDATE
+   FROM
+       DUAL;
+
+-- RAISE_APPLICATION_ERROR(-20201,M_AUCTION_DATE||' '||M_INST_TYPE||' '||M_ISSUER_CODE||' '||M_SECURITY_CODE||' '||M_PORTFOLIO_CODE);
+----selecting  bid_int_rate_base_code,seller_code-----------
+ SELECT
+     BID_INT_RATE_BASE_CODE,SELLER_CODE
+   INTO
+     M_BID_INT_RATE_BASE_CODE,M_SELLER_CODE
+ FROM
+     PA_AUCTION_REFERENCE
+ WHERE
+     AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+     INST_TYPE       =M_INST_TYPE AND
+     ISSUER_CODE     =M_ISSUER_CODE AND
+     SECURITY_CODE   =M_SECURITY_CODE AND
+     PORTFOLIO_CODE  =M_PORTFOLIO_CODE ;
+
+----selecting-- clean price,fval, acc_int_tot,sett_val,cost---------
+OPEN DEAL_DETAIL;
+
+     LOOP
+         M_CUT_OFF_PRICE :=NULL;
+         M_FACE_VALUE    :=NULL;
+         M_COST          :=NULL;
+         M_ACC_INT_TOTAL :=NULL;
+         M_SETTLE_VALUE  :=NULL;
+         M_DEAL_NO       :=NULL;
+
+       FETCH
+          DEAL_DETAIL
+       INTO
+          M_CUT_OFF_PRICE,M_FACE_VALUE,M_COST,M_ACC_INT_TOTAL,M_SETTLE_VALUE;
+
+       EXIT WHEN DEAL_DETAIL%NOTFOUND;
+
+       --calling a function which returns  yield ------
+       M_YIELD:=DN_FIN_YIELD_PRICE_CLEAN(M_SECURITY_CODE,M_CUT_OFF_PRICE,TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),M_BID_INT_RATE_BASE_CODE);
+
+       --calling a function which returns  dirty ------
+        M_DIRTY:=DN_FIN_PRICE_DIRTY_YIELD(M_SECURITY_CODE,M_YIELD,TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),M_BID_INT_RATE_BASE_CODE);
+
+  --RAISE_APPLICATION_ERROR(-20201,M_YIELD ||' '||M_DIRTY||''||M_DEAL_NO||''||M_CUT_OFF_PRICE||''||M_FACE_VALUE||''||M_COST||''||M_ACC_INT_TOTAL||''||M_SETTLE_VALUE );
+
+   IF M_DIRTY IS NOT NULL THEN
+
+       --Creating new sequence
+       IF M_DEAL_NO IS NULL THEN
+        SELECT
+          'OR'||TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_OUTRIGHT.NEXTVAL),3,'0')
+        INTO
+          M_DEAL_NO
+        FROM
+          DUAL;
+
+       END IF;
+
+
+
+--IF M_DIRTY IS NOT NULL THEN
+     UPDATE DN_TRN_OUTP_SALE
+       SET BUY_PORTFOLIO_CODE =M_PORTFOLIO_CODE,
+           SELL_PORTFOLIO_CODE=M_SELLER_CODE,
+  	       INST_TYPE          =M_INST_TYPE,
+	       SECURITY_CODE      =M_SECURITY_CODE,
+	       CURR_CODE          ='SLR',
+	       EFF_VALDATE_TYPE   ='UD',
+	       EFF_VALDATE        =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	       INT_RATE_BASE_CODE =M_BID_INT_RATE_BASE_CODE,
+           PRICE_CLEAN        =M_CUT_OFF_PRICE,
+           PRICE_DIRTY        =M_DIRTY,
+	       YIELD              =M_YIELD,
+	       SETTLE_VALUE       =M_SETTLE_VALUE,
+	       FACE_VALUE         =M_FACE_VALUE,
+	       ACC_INT            =M_ACC_INT_TOTAL,
+	       COST               =M_COST,
+           DN_USER            =M_ENTERED_BY
+        WHERE
+           DEAL_NO=M_DEAL_NO;
+
+      IF SQL%NOTFOUND THEN
+
+         INSERT INTO DN_TRN_OUTP_SALE
+          (DEAL_NO,
+  	       BUY_PORTFOLIO_CODE,
+           SELL_PORTFOLIO_CODE,
+  	       INST_TYPE,
+	       SECURITY_CODE,
+	       CURR_CODE,
+	       EFF_VALDATE_TYPE,
+	       EFF_VALDATE,
+	       INT_RATE_BASE_CODE,
+	       YIELD,
+	       SETTLE_VALUE,
+	       PRICE_CLEAN,
+	       FACE_VALUE,
+	       PRICE_DIRTY,
+	       ACC_INT,
+	       COST,
+           NO_OF_SETTL_MODES,
+           DN_USER)
+             VALUES(
+               M_DEAL_NO,
+  	           M_PORTFOLIO_CODE,
+               M_SELLER_CODE,
+  	           M_INST_TYPE,
+	           M_SECURITY_CODE,
+	           'SLR',
+	           'UD',
+	           TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	           M_BID_INT_RATE_BASE_CODE,
+	           M_YIELD,
+	           M_SETTLE_VALUE,
+	           M_CUT_OFF_PRICE,
+	           M_FACE_VALUE,
+	           M_DIRTY,
+	           M_ACC_INT_TOTAL,
+	           M_COST,
+               1,
+               M_ENTERED_BY
+               );
+       END IF;
+
+   IF  M_DEAL_NO IS NOT NULL AND M_SETTLE_VALUE IS NOT NULL THEN
+       UPDATE PA_AUCTION_DETAILS
+          SET DEAL_NO        =M_DEAL_NO
+       WHERE
+          AUCTION_DATE    =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY')  AND
+          INST_TYPE       =M_INST_TYPE AND
+          ISSUER_CODE     =M_ISSUER_CODE AND
+          SECURITY_CODE   =M_SECURITY_CODE AND
+          CUT_OFF_PRICE   =M_CUT_OFF_PRICE AND
+          PORTFOLIO_CODE  =M_PORTFOLIO_CODE ;
+
+      UPDATE DN_TRN_OUTP_SALE_SETTLE
+         SET SETTLE_AMOUNT      =M_SETTLE_VALUE,
+             BUY_PORTFOLIO_CODE =M_PORTFOLIO_CODE
+      WHERE  DEAL_NO        =M_DEAL_NO
+         AND SETTLE_MODE    ='CURR_ACC';
+
+
+      IF SQL%NOTFOUND THEN
+        INSERT INTO DN_TRN_OUTP_SALE_SETTLE
+              (DEAL_NO,
+               SETTLE_MODE,
+               SETTLE_AMOUNT,
+               BUY_PORTFOLIO_CODE)
+                   VALUES(
+                       M_DEAL_NO,
+                       'CURR_ACC',
+                       M_SETTLE_VALUE,
+                       M_PORTFOLIO_CODE);
+      END IF;
+     END IF;
+
+     M_DEAL_NO:=NULL;
+
+   END IF;
+ END LOOP;
+-----------------END OF MAIN---------------------
+ OPEN BID_DETAIL;
+
+     LOOP
+         M_REF_NO :=NULL;
+         M_DEAL_NO:=NULL;
+       FETCH
+          BID_DETAIL
+       INTO
+          M_REF_NO;
+
+       EXIT WHEN BID_DETAIL%NOTFOUND;
+
+       SELECT
+           BIDDER_CODE,CLIENT_INT_RATE_BASE_CODE,CLIENT_YIELD,
+           CLIENT_PRICE_CLEAN,CLIENT_PRICE_DIRTY,CLIENT_FACE_VALUE,
+           CLIENT_COST,CLIENT_ACC_INT,CLIENT_SETTLE_VALUE
+       INTO
+           M_BIDDER_CODE,M_CLIENT_INT_RATE_BASE_CODE,M_CLIENT_YIELD,
+           M_CLIENT_PRICE_CLEAN,M_CLIENT_PRICE_DIRTY,M_CLIENT_FACE_VALUE,
+           M_CLIENT_COST,M_CLIENT_ACC_INT,M_CLIENT_SETTLE_VALUE
+       FROM
+           PA_BID_ENTRY
+       WHERE
+           REF_NO=M_REF_NO;
+
+IF M_PORTFOLIO_CODE <> M_BIDDER_CODE THEN
+       IF M_DEAL_NO IS NULL THEN
+          SELECT
+           'OR'||TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_OUTRIGHT.NEXTVAL),3,'0')
+         INTO
+           M_DEAL_NO
+         FROM
+           DUAL;
+
+      END IF;
+
+      UPDATE DN_TRN_OUTP_SALE
+       SET BUY_PORTFOLIO_CODE =M_BIDDER_CODE,
+           SELL_PORTFOLIO_CODE=M_PORTFOLIO_CODE,
+  	       INST_TYPE          =M_INST_TYPE,
+	       SECURITY_CODE      =M_SECURITY_CODE,
+	       CURR_CODE          ='SLR',
+	       EFF_VALDATE_TYPE   ='UD',
+	       EFF_VALDATE        =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	       INT_RATE_BASE_CODE =M_CLIENT_INT_RATE_BASE_CODE,
+           PRICE_CLEAN        =M_CLIENT_PRICE_CLEAN,
+           PRICE_DIRTY        =M_CLIENT_PRICE_DIRTY,
+	       YIELD              =M_CLIENT_YIELD/100,
+	       SETTLE_VALUE       =M_CLIENT_SETTLE_VALUE,
+	       FACE_VALUE         =M_CLIENT_FACE_VALUE,
+	       ACC_INT            =M_CLIENT_ACC_INT,
+	       COST               =M_CLIENT_COST,
+           DN_USER            =M_ENTERED_BY
+        WHERE
+           DEAL_NO=M_DEAL_NO;
+
+    IF SQL%NOTFOUND THEN
+
+      INSERT INTO DN_TRN_OUTP_SALE
+          (DEAL_NO,
+  	       BUY_PORTFOLIO_CODE,
+           SELL_PORTFOLIO_CODE,
+  	       INST_TYPE,
+	       SECURITY_CODE,
+	       CURR_CODE,
+	       EFF_VALDATE_TYPE,
+	       EFF_VALDATE,
+	       INT_RATE_BASE_CODE,
+	       YIELD,
+	       SETTLE_VALUE,
+	       PRICE_CLEAN,
+	       FACE_VALUE,
+	       PRICE_DIRTY,
+	       ACC_INT,
+	       COST,
+           NO_OF_SETTL_MODES,
+           DN_USER)
+             VALUES(
+                M_DEAL_NO,
+                M_BIDDER_CODE,
+  	            M_PORTFOLIO_CODE,
+                M_INST_TYPE,
+                M_SECURITY_CODE,
+	            'SLR',
+	            'UD',
+	            TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	            M_CLIENT_INT_RATE_BASE_CODE,
+                M_CLIENT_YIELD/100,
+	            M_CLIENT_SETTLE_VALUE,
+	            M_CLIENT_PRICE_CLEAN,
+	            M_CLIENT_FACE_VALUE,
+	            M_CLIENT_PRICE_DIRTY,
+	            M_CLIENT_ACC_INT,
+	            M_CLIENT_COST,
+                1,
+                M_ENTERED_BY);
+         END IF;
+
+  IF  M_DEAL_NO IS NOT NULL AND M_CLIENT_SETTLE_VALUE IS NOT NULL THEN
+       UPDATE PA_BID_ALLO
+          SET DEAL_NO   =M_DEAL_NO
+       WHERE
+          REF_NO  =M_REF_NO;
+
+      UPDATE DN_TRN_OUTP_SALE_SETTLE
+         SET SETTLE_AMOUNT      =M_CLIENT_SETTLE_VALUE,
+             BUY_PORTFOLIO_CODE =M_BIDDER_CODE
+      WHERE  DEAL_NO        =M_DEAL_NO
+         AND SETTLE_MODE    ='CURR_ACC';
+
+
+      IF SQL%NOTFOUND THEN
+        INSERT INTO DN_TRN_OUTP_SALE_SETTLE
+              (DEAL_NO,
+               SETTLE_MODE,
+               SETTLE_AMOUNT,
+               BUY_PORTFOLIO_CODE)
+                   VALUES(
+                       M_DEAL_NO,
+                       'CURR_ACC',
+                       M_CLIENT_SETTLE_VALUE,
+                       M_BIDDER_CODE);
+      END IF;
+    END IF;
+
+   END IF; ---M_PORFOLIO_CODE <> m-BIDDER_CODE--------------
+
+
+ END LOOP;
+ --CLOSE------
+ ---NEW------------
+ /*OPEN BID_DETAIL2;
+
+     LOOP
+         M_REF_NO :=NULL;
+         M_DEAL_NO:=NULL;
+       FETCH
+          BID_DETAIL2
+       INTO
+          M_REF_NO;
+
+       EXIT WHEN BID_DETAIL2%NOTFOUND;
+
+       SELECT
+           BIDDER_CODE,BID_INT_RATE_BASE_CODE,BID_YIELD,
+           BID_PRICE_CLEAN,BID_PRICE_DIRTY,BID_FACE_VALUE,
+           BID_COST,BID_ACC_INT,BID_SETTLE_VALUE
+       INTO
+           M_BIDDER_CODE,MM_BID_INT_RATE_BASE_CODE,M_BID_YIELD,
+           M_BID_PRICE_CLEAN,M_BID_PRICE_DIRTY,M_BID_FACE_VALUE,
+           M_BID_COST,M_BID_ACC_INT,M_BID_SETTLE_VALUE
+       FROM
+           PA_BID_ENTRY
+       WHERE
+           REF_NO=M_REF_NO;
+
+       IF M_DEAL_NO IS NULL THEN
+          SELECT
+           'OR'||TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_OUTRIGHT.NEXTVAL),3,'0')
+         INTO
+           M_DEAL_NO
+         FROM
+           DUAL;
+
+      END IF;
+IF M_PORTFOLIO_CODE <> M_BIDDER_CODE THEN
+      UPDATE DN_TRN_OUTP_SALE
+       SET BUY_PORTFOLIO_CODE =M_BIDDER_CODE,
+           SELL_PORTFOLIO_CODE=M_PORTFOLIO_CODE,
+  	       INST_TYPE          =M_INST_TYPE,
+	       SECURITY_CODE      =M_SECURITY_CODE,
+	       CURR_CODE          ='SLR',
+	       EFF_VALDATE_TYPE   ='UD',
+	       EFF_VALDATE        =TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	       INT_RATE_BASE_CODE =MM_BID_INT_RATE_BASE_CODE,
+           PRICE_CLEAN        =M_BID_PRICE_CLEAN,
+           PRICE_DIRTY        =M_BID_PRICE_DIRTY,
+	       YIELD              =M_BID_YIELD/100,
+	       SETTLE_VALUE       =M_BID_SETTLE_VALUE,
+	       FACE_VALUE         =M_BID_FACE_VALUE,
+	       ACC_INT            =M_BID_ACC_INT,
+	       COST               =M_BID_COST,
+           DN_USER            =M_ENTERED_BY
+        WHERE
+           DEAL_NO=M_DEAL_NO;
+
+    IF SQL%NOTFOUND THEN
+
+      INSERT INTO DN_TRN_OUTP_SALE
+          (DEAL_NO,
+  	       BUY_PORTFOLIO_CODE,
+           SELL_PORTFOLIO_CODE,
+  	       INST_TYPE,
+	       SECURITY_CODE,
+	       CURR_CODE,
+	       EFF_VALDATE_TYPE,
+	       EFF_VALDATE,
+	       INT_RATE_BASE_CODE,
+	       YIELD,
+	       SETTLE_VALUE,
+	       PRICE_CLEAN,
+	       FACE_VALUE,
+	       PRICE_DIRTY,
+	       ACC_INT,
+	       COST,
+           NO_OF_SETTL_MODES,
+           DN_USER)
+             VALUES(
+                M_DEAL_NO,
+                M_BIDDER_CODE,
+  	            M_PORTFOLIO_CODE,
+                M_INST_TYPE,
+                M_SECURITY_CODE,
+	            'SLR',
+	            'UD',
+	            TO_DATE(M_AUCTION_DATE,'DD/MM/YYYY'),
+	            MM_BID_INT_RATE_BASE_CODE,
+                M_BID_YIELD/100,
+	            M_BID_SETTLE_VALUE,
+	            M_BID_PRICE_CLEAN,
+	            M_BID_FACE_VALUE,
+	            M_BID_PRICE_DIRTY,
+	            M_BID_ACC_INT,
+	            M_BID_COST,
+                1,
+                M_ENTERED_BY);
+         END IF;
+
+  IF  M_DEAL_NO IS NOT NULL AND M_CLIENT_SETTLE_VALUE IS NOT NULL THEN
+       UPDATE PA_BID_ALLO
+          SET DEAL_NO   =M_DEAL_NO
+       WHERE
+          REF_NO  =M_REF_NO;
+
+      UPDATE DN_TRN_OUTP_SALE_SETTLE
+         SET SETTLE_AMOUNT      =M_BID_SETTLE_VALUE,
+             BUY_PORTFOLIO_CODE =M_BIDDER_CODE
+      WHERE  DEAL_NO        =M_DEAL_NO
+         AND SETTLE_MODE    ='CURR_ACC';
+
+
+      IF SQL%NOTFOUND THEN
+        INSERT INTO DN_TRN_OUTP_SALE_SETTLE
+              (DEAL_NO,
+               SETTLE_MODE,
+               SETTLE_AMOUNT,
+               BUY_PORTFOLIO_CODE)
+                   VALUES(
+                       M_DEAL_NO,
+                       'CURR_ACC',
+                       M_BID_SETTLE_VALUE,
+                       M_BIDDER_CODE);
+      END IF;
+    END IF;
+   END IF;---M_PORFOLIO_CODE <> M_BIDDER_CODE---------
+
+
+ END LOOP; */
+ --CLOSE---------
+END IF;
+ COMMIT;
+
+
+END PA_DEAL_POS_IN;
+
+/

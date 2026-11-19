@@ -1,0 +1,23 @@
+--------------------------------------------------------
+--  DDL for Function DN_UNUTILIZED_CASH_3
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_UNUTILIZED_CASH_3" 
+( M_DEAL_NO      IN VARCHAR2,
+  M_VALUE_DATE     VARCHAR2 )
+  RETURN VARCHAR2 IS
+
+
+  M_UNUTILIZED_CASH            number;
+
+BEGIN
+
+  SELECT SUM(NVL(ALLO_AMOUNT,0)) INTO M_UNUTILIZED_CASH
+  FROM DN_LOAN_DEAL_ALLOCATION A 
+  WHERE A.ALLO_DOCREFNO_TO = M_DEAL_NO;
+
+   RETURN M_UNUTILIZED_CASH ;
+
+END;
+
+/

@@ -1,0 +1,407 @@
+--------------------------------------------------------
+--  DDL for Procedure MBFSL_REPOPRESETTLEMENT_IN1
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."MBFSL_REPOPRESETTLEMENT_IN1" ( 
+    M_DEAL_NO  IN OUT    DN_TRN_REPO_SETTLEMENT.DEAL_NO%TYPE,
+    M_PRIOR_DEAL_NO      DN_TRN_REPO_SETTLEMENT.PRIOR_DEAL_NO%TYPE,
+    M_BCODE              DN_TRN_REPO_SETTLEMENT_SETTLE.BORR_PORTFOLIO_CODE%TYPE,
+    M_LCODE              DN_TRN_REPO_SETTLEMENT_SETTLE.LEND_PORTFOLIO_CODE%TYPE,
+    M_CURR               DN_TRN_REPO_SETTLEMENT.CURR_CODE%TYPE,
+    M_SET_DATE           CHAR,
+    M_TENOR              DN_TRN_REPO_SETTLEMENT.PAYMENT_TO_LEND%TYPE,
+    M_SEL_MODES          DN_TRN_REPO_SETTLEMENT.NO_OF_SETTL_MODES%TYPE,
+    M_SETTLE             DN_TRN_REPO_SETTLEMENT_SETTLE.SETTLE_MODE%TYPE,
+    M_SETAMT             DN_TRN_REPO_SETTLEMENT_SETTLE.SETTLE_AMOUNT%TYPE,
+    M_BACC               DN_TRN_REPO_SETTLEMENT_SETTLE.BORR_ACC_NO%TYPE,
+    M_SACC               DN_TRN_REPO_SETTLEMENT_SETTLE.LEND_ACC_NO%TYPE,
+    M_COMM1              DN_TRN_REPO_SETTLEMENT_SETTLE.BORR_SETTLE_COMMENT%TYPE,
+    M_COMM2              DN_TRN_REPO_SETTLEMENT_SETTLE.LEND_SETTLE_COMMENT%TYPE,
+    M_USERNAME           DN_TRN_REPO_SETTLEMENT.DN_USER%TYPE,
+    M_SELECT_TYPE        CHAR,
+    M_NEW_TENOR          DN_TRN_REPO_PRE_SETTLEMENT.NEW_TENOR%TYPE,
+    M_NEW_LEG2_VALUE     DN_TRN_REPO_PRE_SETTLEMENT.LEG2_VALUE%TYPE,
+    M_NEW_INT_AMOUNT     DN_TRN_REPO_PRE_SETTLEMENT.NEW_INT_AMOUNT%TYPE,
+    M_NEW_MATURITY_DATE  VARCHAR2,
+    M_NEW_YIELD          DN_TRN_REPO_PRE_SETTLEMENT.NEW_YIELD%TYPE
+    --M_DEAL_NUMBER        DN_TRN_REPO_SETTLEMENT.DEAL_NO%TYPE
+)
+
+AS
+
+   M_USER          DN_TRN_REPO_SETTLEMENT.DN_USER%TYPE;
+   M_S_DATE        DN_TRN_REPO_SETTLEMENT.SETTLE_DATE%TYPE;
+   M_BCOUNT        NUMBER;
+   M_LCOUNT        NUMBER;
+   M_BORR_BRANCH_CODE      DN_REF_PORTF_SETTLEMENT.BRANCH_CODE%TYPE;
+   M_LEND_BRANCH_CODE      DN_REF_PORTF_SETTLEMENT.BRANCH_CODE%TYPE;
+   MM_CURRENCY_VALUE       DN_REF_EXCHANGE_RATES.CURRENCY_VALUE%TYPE;--CURRENCY
+   err_num   varchar2(200);
+   err_msg   varchar2(200);
+
+
+BEGIN
+
+--DN_VALIDATE_SAVE_RIGHTS(M_USERNAME,'WD_Repos_Pre_Mature_Settlement');
+
+SELECT  CURRENCY_VALUE
+INTO    MM_CURRENCY_VALUE
+FROM    DN_REF_EXCHANGE_RATES
+WHERE   CURR_CODE=M_CURR;
+
+
+
+    IF SUBSTR(M_USERNAME,1,1)=' ' OR M_USERNAME IS NULL THEN
+       M_USER:='Un Identify';
+    ELSE
+       M_USER:=M_USERNAME;
+    END IF;
+    --Format settlement date type
+
+    --RAISE_APPLICATION_ERROR(-20001,'M_NEW_MATURITY_DATE'||M_NEW_MATURITY_DATE);
+    SELECT
+      TO_DATE(M_NEW_MATURITY_DATE,'DD/MM/YYYY')--M_SET_DATE
+    INTO
+      M_S_DATE
+    FROM DUAL;
+
+    --Creating new sequence
+    --IF M_DEAL_NUMBER IS NULL THEN
+       SELECT TO_CHAR(SYSDATE,'YYYY')||TO_CHAR(SYSDATE,'MM')||TO_CHAR(SYSDATE,'DD')||'-'||LPAD(TO_CHAR(DN_SEQ_REPO_SETTLEMENT.NEXTVAL),3,'0') INTO M_DEAL_NO FROM DUAL;
+       M_DEAL_NO:=  'RS'||M_DEAL_NO;
+    /*ELSE
+       M_DEAL_NO:=M_DEAL_NUMBER;
+    END IF;
+    */
+
+    IF SUBSTR(M_PRIOR_DEAL_NO,0,2) = 'RF' THEN
+      INSERT INTO DN_TRN_REPO_PRE_SETTLEMENT
+      SELECT M_DEAL_NO,DEAL_NO,BORR_PORTFOLIO_CODE,LEND_PORTFOLIO_CODE,
+             SEC_ALW_LENDER,PHYSICAL_DELIVERY,EXCHANGE_SEC,
+             CURR_CODE,EFF_VALDATE_TYPE,EFF_VALDATE,ON_CALL_DEAL,
+             MATURITY_DATE,TENOR,INT_RATE_BASE_CODE,YIELD,
+             LEG1_VALUE,LEG2_VALUE,INT_AMOUNT,0,0,NO_OF_SETTL_MODES,
+             DN_USER,ENT_DATE,APP_STATUS,INT_ACCR,CUSTODIAL_STATUS,
+             SCRIPT_STATUS,TO_DATE(M_NEW_MATURITY_DATE,'DD/MM/YYYY'),M_NEW_LEG2_VALUE,
+             M_NEW_TENOR,M_NEW_LEG2_VALUE-LEG1_VALUE,M_NEW_YIELD/100
+      FROM   DN_TRN_REPO_FRESH
+      WHERE  DEAL_NO = M_PRIOR_DEAL_NO AND LEG2_VALUE=M_SETAMT;
+
+
+      UPDATE DN_TRN_REPO_FRESH
+      SET    LEG2_VALUE    = M_NEW_LEG2_VALUE,
+             MATURITY_DATE = TO_DATE(M_NEW_MATURITY_DATE,'DD-MM-YYYY'),
+             TENOR         = M_NEW_TENOR,
+             YIELD         = M_NEW_YIELD/100,
+             INT_AMOUNT    = M_NEW_LEG2_VALUE-LEG1_VALUE
+      WHERE  DEAL_NO = M_PRIOR_DEAL_NO AND LEG2_VALUE=M_SETAMT;
+
+    ELSIF SUBSTR(M_PRIOR_DEAL_NO,0,2) = 'RR' THEN
+
+      INSERT INTO DN_TRN_REPO_PRE_SETTLEMENT
+      SELECT M_DEAL_NO,DEAL_NO,BORR_PORTFOLIO_CODE,LEND_PORTFOLIO_CODE,
+             SEC_ALW_LENDER,PHYSICAL_DELIVERY,EXCHANGE_SEC,
+             CURR_CODE,EFF_VALDATE_TYPE,EFF_VALDATE,ON_CALL_DEAL,
+             MATURITY_DATE,TENOR,INT_RATE_BASE_CODE,YEILD,
+             LEG1_VALUE,LEG2_VALUE,INT_AMOUNT,0,0,NO_OF_SETTL_MODES,
+             DN_USER,ENT_DATE,APP_STATUS,INT_ACCR,CUSTODIAL_STATUS,
+             SCRIPT_STATUS,TO_DATE(M_NEW_MATURITY_DATE,'DD-MM-YYYY'),M_NEW_LEG2_VALUE,
+             M_NEW_TENOR,M_NEW_LEG2_VALUE-LEG1_VALUE,M_NEW_YIELD/100
+      FROM   DN_TRN_REPO_ROLLOVER
+      WHERE  DEAL_NO= M_PRIOR_DEAL_NO;
+
+      UPDATE DN_TRN_REPO_ROLLOVER
+      SET    LEG2_VALUE    = M_NEW_LEG2_VALUE,
+             MATURITY_DATE = TO_DATE(M_NEW_MATURITY_DATE,'DD-MM-YYYY'),
+             TENOR         = M_NEW_TENOR,
+             YEILD         = M_NEW_YIELD/100,
+             INT_AMOUNT    = M_NEW_LEG2_VALUE-LEG1_VALUE
+      WHERE  DEAL_NO = M_PRIOR_DEAL_NO AND LEG2_VALUE=M_SETAMT;
+
+
+    END IF;
+     
+    /* move this part into CONFIRMATION 
+    UPDATE DN_ACC_LICENCEE_GEN_ACCOUNT
+    SET    TRNAMOUNT = M_NEW_LEG2_VALUE,
+           TRNDATE   = TO_DATE(M_NEW_MATURITY_DATE,'DD-MM-YYYY')
+    WHERE  DOCREFNO  = M_PRIOR_DEAL_NO AND
+           TRNAMOUNT = M_SETAMT 
+         */
+           /*AND
+           TO_DATE(TRNDATE,'DD-MM-YYYY')   = TO_DATE(M_SET_DATE,'DD-MM-YYYY')*/
+         --  ;
+
+          INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_PRIOR_DEAL_NO,
+              M_USER,
+              SYSDATE,
+              'PRE_MAT');
+
+    IF M_SEL_MODES>0 THEN
+       UPDATE DN_TRN_REPO_SETTLEMENT
+       SET NO_OF_SETTL_MODES=M_SEL_MODES
+       WHERE DEAL_NO=M_DEAL_NO;
+    END IF;
+
+--IF M_DEAL_NO IS NOT NULL AND M_SELECT_TYPE='MAIN1' THEN
+IF M_CURR<>'SLR' THEN --CURRENCY
+------------------------------------------------CURRENCY
+
+ INSERT INTO DN_TRN_DEAL_CURRENCY
+  (DEAL_NO,PAYTO_LENDER,CURR_CODE,LEG1_VALUE)
+ VALUES
+  (M_DEAL_NO,M_NEW_LEG2_VALUE,M_CURR,M_NEW_LEG2_VALUE);
+
+/*UPDATE DN_TRN_DEAL_CURRENCY
+SET    LEG1_VALUE=M_LEG1,
+       LEG2_VALUE=M_LEG2,
+       CURR_CODE=M_CURRENCY
+WHERE  DEAL_NO=M_DEAL_NO;
+*/
+------------------------------------------------CURRENCY
+UPDATE DN_TRN_REPO_SETTLEMENT
+       SET PRIOR_DEAL_NO      =M_PRIOR_DEAL_NO,
+           CURR_CODE          =M_CURR,
+           SETTLE_DATE        =M_S_DATE,
+           PAYMENT_TO_LEND    =M_NEW_LEG2_VALUE*MM_CURRENCY_VALUE,--CURRENCY
+           DN_USER            =M_USER
+       WHERE
+           DEAL_NO=M_DEAL_NO
+           AND
+           APP_STATUS='ENT';
+
+       IF SQL%NOTFOUND THEN
+          INSERT INTO DN_TRN_REPO_SETTLEMENT
+          (DEAL_NO,
+           PRIOR_DEAL_NO,
+           CURR_CODE,
+           SETTLE_DATE,
+           PAYMENT_TO_LEND,
+           DN_USER)
+           VALUES(
+             M_DEAL_NO,
+             M_PRIOR_DEAL_NO,
+             M_CURR,
+             M_S_DATE,
+             M_NEW_LEG2_VALUE*MM_CURRENCY_VALUE,--CURRENCY
+             M_USER
+             );
+--ADDED FOR TIME LOG MANAGEMENT BY S.YASODHA
+
+              INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USER,
+              SYSDATE,
+              'ENTERED');
+--*******************************
+       END IF;
+
+
+
+
+ELSE --CURRENCY
+       UPDATE DN_TRN_REPO_SETTLEMENT
+       SET PRIOR_DEAL_NO      =M_PRIOR_DEAL_NO,
+           CURR_CODE          =M_CURR,
+           SETTLE_DATE        =M_S_DATE,
+           PAYMENT_TO_LEND    =M_NEW_LEG2_VALUE,
+           DN_USER            =M_USER
+       WHERE
+           DEAL_NO=M_DEAL_NO
+           AND
+           APP_STATUS='ENT';
+
+       IF SQL%NOTFOUND THEN
+          INSERT INTO DN_TRN_REPO_SETTLEMENT
+          (DEAL_NO,
+           PRIOR_DEAL_NO,
+           CURR_CODE,
+           SETTLE_DATE,
+           PAYMENT_TO_LEND,
+           DN_USER)
+           VALUES(
+             M_DEAL_NO,
+             M_PRIOR_DEAL_NO,
+             M_CURR,
+             M_S_DATE,
+             M_NEW_LEG2_VALUE,
+             M_USER
+             );
+--ADDED FOR TIME LOG MANAGEMENT BY S.YASODHA
+
+          INSERT INTO DN_TIME_LOG
+          (SUS_REF_NO,
+           DN_USER,
+           ENT_DATE,
+           DESCRIPTION)
+           VALUES
+            (
+              M_DEAL_NO,
+              M_USER,
+              SYSDATE,
+              'ENTERED');
+--*******************************
+       END IF;
+END IF;--CURRENCY
+--   END IF;
+   --Select BORR_PORTFOLIO_CODE details from DN_REF_PORTF_SETTLEMENT
+   M_BCOUNT:=0;
+   SELECT COUNT(*) INTO M_BCOUNT
+   FROM  DN_REF_PORTF_SETTLEMENT A
+   WHERE A.PORTFOLIO_CODE=M_BCODE AND A.ACC_NO=M_BACC;
+   IF M_BCOUNT>0 THEN
+      SELECT A.BRANCH_CODE INTO M_BORR_BRANCH_CODE
+      FROM  DN_REF_PORTF_SETTLEMENT A
+      WHERE A.PORTFOLIO_CODE=M_BCODE AND A.ACC_NO=M_BACC;
+   END IF;
+
+   --Select SEL_PORTFOLIO_CODE details from DN_REF_PORTF_SETTLEMENT
+   M_LCOUNT:=0;
+   SELECT COUNT(*) INTO M_LCOUNT
+   FROM  DN_REF_PORTF_SETTLEMENT A
+   WHERE A.PORTFOLIO_CODE=M_LCODE AND A.ACC_NO=M_SACC;
+   IF M_LCOUNT>0 THEN
+      SELECT A.BRANCH_CODE INTO M_LEND_BRANCH_CODE
+      FROM  DN_REF_PORTF_SETTLEMENT A
+      WHERE A.PORTFOLIO_CODE=M_LCODE AND A.ACC_NO=M_SACC;
+   END IF;
+--   IF M_DEAL_NO IS NOT NULL AND M_SETTLE<>'NULL' AND M_SELECT_TYPE='MAIN2' THEN
+      IF M_SETTLE IS NOT NULL THEN
+         IF M_CURR<>'SLR' THEN --CURRENCY
+        UPDATE DN_TRN_REPO_SETTLEMENT_SETTLE
+         SET SETTLE_AMOUNT       =M_NEW_LEG2_VALUE*MM_CURRENCY_VALUE,--CURRENCY
+             BORR_PORTFOLIO_CODE =M_BCODE,
+             BORR_BRANCH_CODE    =M_BORR_BRANCH_CODE,
+             BORR_ACC_NO         =M_BACC,
+             BORR_SETTLE_COMMENT =M_COMM1,
+             LEND_PORTFOLIO_CODE =M_LCODE,
+             LEND_BRANCH_CODE    =M_LEND_BRANCH_CODE,
+             LEND_ACC_NO         =M_SACC,
+             LEND_SETTLE_COMMENT =M_COMM2,
+             CURRENCY_SETTLE_AMOUNT=M_NEW_LEG2_VALUE--CURRENCY
+         WHERE
+             DEAL_NO    =M_DEAL_NO
+             AND
+             SETTLE_MODE=M_SETTLE;
+
+             IF SQL%NOTFOUND THEN
+                INSERT INTO DN_TRN_REPO_SETTLEMENT_SETTLE
+                (DEAL_NO,
+                 SETTLE_MODE,
+                 SETTLE_AMOUNT,
+                 BORR_PORTFOLIO_CODE,
+                 BORR_BRANCH_CODE,
+                 BORR_ACC_NO,
+                 BORR_SETTLE_COMMENT,
+                 LEND_PORTFOLIO_CODE,
+                 LEND_BRANCH_CODE,
+                 LEND_ACC_NO,
+                 LEND_SETTLE_COMMENT,
+                 CURRENCY_SETTLE_AMOUNT--CURRENCY
+                )
+                VALUES(M_DEAL_NO,
+                       M_SETTLE,
+                       M_NEW_LEG2_VALUE*MM_CURRENCY_VALUE,--CURRENCY
+                       M_BCODE,
+                       M_BORR_BRANCH_CODE,
+                       M_BACC,
+                       M_COMM1,
+                       M_LCODE,
+                       M_LEND_BRANCH_CODE,
+                       M_SACC,
+                       M_COMM2,
+                       M_NEW_LEG2_VALUE--CURRENCY
+                );
+             END IF;
+
+          ELSE --CURRENCY
+         UPDATE DN_TRN_REPO_SETTLEMENT_SETTLE
+         SET SETTLE_AMOUNT       =M_NEW_LEG2_VALUE,
+             BORR_PORTFOLIO_CODE =M_BCODE,
+             BORR_BRANCH_CODE    =M_BORR_BRANCH_CODE,
+             BORR_ACC_NO         =M_BACC,
+             BORR_SETTLE_COMMENT =M_COMM1,
+             LEND_PORTFOLIO_CODE =M_LCODE,
+             LEND_BRANCH_CODE    =M_LEND_BRANCH_CODE,
+             LEND_ACC_NO         =M_SACC,
+             LEND_SETTLE_COMMENT =M_COMM2
+         WHERE
+             DEAL_NO    =M_DEAL_NO
+             AND
+             SETTLE_MODE=M_SETTLE;
+
+             IF SQL%NOTFOUND THEN
+                INSERT INTO DN_TRN_REPO_SETTLEMENT_SETTLE
+                (DEAL_NO,
+                 SETTLE_MODE,
+                 SETTLE_AMOUNT,
+                 BORR_PORTFOLIO_CODE,
+                 BORR_BRANCH_CODE,
+                 BORR_ACC_NO,
+                 BORR_SETTLE_COMMENT,
+                 LEND_PORTFOLIO_CODE,
+                 LEND_BRANCH_CODE,
+                 LEND_ACC_NO,
+                 LEND_SETTLE_COMMENT
+                )
+                VALUES(M_DEAL_NO,
+                       M_SETTLE,
+                       M_NEW_LEG2_VALUE,
+                       M_BCODE,
+                       M_BORR_BRANCH_CODE,
+                       M_BACC,
+                       M_COMM1,
+                       M_LCODE,
+                       M_LEND_BRANCH_CODE,
+                       M_SACC,
+                       M_COMM2
+                );
+             END IF;
+
+      END IF;--CURRENCY
+--      END IF;
+   END IF;
+
+
+    COMMIT;
+    --If the data type is incorrect then delete the records from the relavent tables
+/*EXCEPTION
+  WHEN OTHERS THEN
+  ROLLBACK;
+   err_num :=  substr(SQLCODE,1,15);
+   err_msg := substr(SQLERRM,1,200) ;
+  INSERT INTO DN_REF_SEQUENCE_LOG VALUES (M_DEAL_NO,err_num||''||err_msg,'ERROR IN REPOSETTLEMENT',SYSDATE);
+  COMMIT;
+ RAISE_APPLICATION_ERROR(-20201,SQLCODE||SQLERRM);
+*/ /*EXCEPTION
+  WHEN OTHERS THEN
+
+    DELETE DN_TRN_REPO_SETTLEMENT
+    WHERE
+    DEAL_NO=M_DEAL_NO;
+
+    DELETE DN_TRN_REPO_SETTLEMENT_SETTLE
+    WHERE
+    DEAL_NO=M_DEAL_NO;
+
+    COMMIT;
+
+    RAISE_APPLICATION_ERROR(-20201,'Data error');*/
+
+END MBFSL_REPOPRESETTLEMENT_IN1; 
+
+/

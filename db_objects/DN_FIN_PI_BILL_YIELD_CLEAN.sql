@@ -1,0 +1,83 @@
+--------------------------------------------------------
+--  DDL for Function DN_FIN_PI_BILL_YIELD_CLEAN
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_FIN_PI_BILL_YIELD_CLEAN" 
+  (
+    M_CLEAN_PRICE         DN_TRN_OUTP_SALE.PRICE_CLEAN%TYPE,
+    M_EFF_VALDATE         DN_TRN_OUTP_SALE.EFF_VALDATE%TYPE,
+    M_INT_RATE_BASE_CODE  DN_TRN_OUTP_SALE.INT_RATE_BASE_CODE%TYPE,
+    M_MATURITY_DATE       DN_TRN_REPO_PERIOD_INT.MATURITY_DATE%TYPE
+   )
+
+   RETURN  REAL
+
+   IS
+
+    -- Function     : This returns bill for the given price (periodic interst)
+    -- System       : DEALNET System
+    -- Created by   : V.Thilakesan
+    -- Created on   : 13/03/2000
+
+   M_RETVAL                     NUMBER;
+   --M_MATURITY_DATE              DN_REF_SECURITY.MATURITY_DATE%TYPE;
+   M_NO_DAYS_PER_YEAR           NUMBER;
+   M_NO_DAYS_UPTO_MATURITY      NUMBER;
+   M_FACE_VALUE                 NUMBER;
+   M_TAY                        NUMBER;
+   M_INT_COMPONENT              NUMBER;
+   M_INT_YIELD                  NUMBER;
+
+BEGIN
+
+    M_FACE_VALUE   :=100.00;  -- Allways bILL face value is this
+--    M_NO_DAYS_PER_YEAR :=364;
+
+    SELECT
+       DECODE(DENOMINATOR,'Act',(ADD_MONTHS(M_EFF_VALDATE,12)-M_EFF_VALDATE),DENOMINATOR)
+       INTO M_NO_DAYS_PER_YEAR
+    FROM
+       DN_REF_INTR_BASE
+    WHERE
+       INT_RATE_BASE_CODE=M_INT_RATE_BASE_CODE;
+
+    /*SELECT
+       MATURITY_DATE
+       INTO
+       M_MATURITY_DATE
+    FROM
+       DN_REF_SECURITY
+    WHERE
+       SECURITY_CODE=M_SECURITY_CODE;
+    */
+
+--    DBMS_OUTPUT.PUT_LINE('EVALD  '||TO_CHAR(M_EFF_VALDATE,'DD-MON-YYYY'));
+
+      SELECT
+         (M_MATURITY_DATE-M_EFF_VALDATE)
+         INTO M_NO_DAYS_UPTO_MATURITY
+      FROM DUAL;
+
+--    DBMS_OUTPUT.PUT_LINE('DAYUPTOMAT  '||TO_CHAR(M_NO_DAYS_UPTO_MATURITY ));
+
+    M_INT_COMPONENT:=M_FACE_VALUE-M_CLEAN_PRICE;
+
+--    DBMS_OUTPUT.PUT_LINE('INT COMP  '||TO_CHAR(M_INT_COMPONENT ));
+
+    M_INT_YIELD:=M_INT_COMPONENT/M_CLEAN_PRICE;
+
+--    DBMS_OUTPUT.PUT_LINE('INT YIELD  '||TO_CHAR(M_INT_YIELD ));
+
+     --Tay
+
+    M_TAY:=M_INT_YIELD/M_NO_DAYS_UPTO_MATURITY*M_NO_DAYS_PER_YEAR;
+
+--    DBMS_OUTPUT.PUT_LINE('TAY  '||TO_CHAR(M_TAY));
+
+    M_RETVAL:=M_TAY;
+
+  RETURN ROUND(M_RETVAL,6);
+
+END DN_FIN_PI_BILL_YIELD_CLEAN;
+
+/

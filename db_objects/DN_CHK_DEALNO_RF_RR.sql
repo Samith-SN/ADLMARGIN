@@ -1,0 +1,40 @@
+--------------------------------------------------------
+--  DDL for Function DN_CHK_DEALNO_RF_RR
+--------------------------------------------------------
+
+  CREATE OR REPLACE EDITIONABLE FUNCTION "ADLMARGIN"."DN_CHK_DEALNO_RF_RR" 
+(
+ M_DEAL_NO         DN_TRN_REPO_FRESH.DEAL_NO%TYPE
+)
+RETURN VARCHAR2
+IS
+M_COUNT1           NUMBER;
+M_COUNT2           NUMBER;
+
+BEGIN
+
+   SELECT COUNT(*)
+   INTO   M_COUNT1
+   FROM   DN_TRN_REPO_SETTLEMENT
+   WHERE  APP_STATUS<>'CANCEL' AND
+          PRIOR_DEAL_NO=M_DEAL_NO;
+
+
+   SELECT /*+INDEX (DN_TRN_REPO_ROLLOVER  IDX_DN_TRN_REPO_ROLLOVER)*/COUNT(*)
+   INTO   M_COUNT2
+   FROM   DN_TRN_REPO_ROLLOVER
+   WHERE  APP_STATUS<>'CANCEL' AND
+          PRIOR_DEAL_NO=M_DEAL_NO;
+
+
+
+
+  IF (M_COUNT1=0  AND M_COUNT2=0 ) THEN
+   RETURN 'N';
+  ELSE
+   RETURN 'Y';
+  END IF;
+
+END DN_CHK_DEALNO_RF_RR;
+
+/

@@ -1,0 +1,52 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_IN_INVENTORY_CUSTODIAL
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_IN_INVENTORY_CUSTODIAL" 
+
+   (M_CUS_FEE_REF_NO      DN_TRN_BO_CUSTODIAL_FEES.CUS_FEE_REF_NO%TYPE,
+    M_PORTFOLIO_CODE      DN_TRN_BO_CUSTODIAL_FEES.PORTFOLIO_CODE%TYPE,
+    M_FEE_RATE            DN_TRN_BO_CUSTODIAL_FEES.FEE_RATE%TYPE,
+    M_FEE_BASE            DN_TRN_BO_CUSTODIAL_FEES.FEE_BASE%TYPE,
+    M_FEE_AMOUNT          DN_TRN_BO_CUSTODIAL_FEES.FEE_AMOUNT%TYPE,
+    M_GST_AMOUNT          DN_TRN_BO_CUSTODIAL_FEES.GST_AMOUNT%TYPE,
+    M_GROSS_AMOUNT        DN_TRN_BO_CUSTODIAL_FEES.GROSS_AMOUNT%TYPE
+    )
+AS
+BEGIN
+
+    /* PROCEDURE  -  TO INSERT INVENTORY CUSTODIAL DETAILS
+       SYSTEM     -  DEALNET
+       CREATED BY -  CHARMINDA.
+       CREATED ON -  08/07/1999 */
+
+--RAISE_APPLICATION_ERROR(-20201,M_ISSUER_CODE||' '||M_INST_TYPE||' '||M_LIABILITY_ISSUE||' '||M_LIABILITY_ISSUE_PREM||' '||M_LIABILITY_GUARANTEE||' '||M_LIABILITY_GUARANTEE_PREM||' '|| M_LIABILITY_ENDOSE||' '||M_LIABILITY_ENDOSE_PREM);
+
+
+
+
+
+        INSERT INTO DN_TRN_BO_CUSTODIAL_FEES
+              (CUS_FEE_REF_NO,
+               PORTFOLIO_CODE,
+               FEE_RATE,
+               FEE_BASE,
+               FEE_AMOUNT,
+               GST_AMOUNT,
+               GROSS_AMOUNT
+             )
+        VALUES
+              (M_CUS_FEE_REF_NO,
+               M_PORTFOLIO_CODE,
+               M_FEE_RATE,
+               M_FEE_BASE,
+               M_FEE_AMOUNT,
+               M_GST_AMOUNT,
+               M_GROSS_AMOUNT);
+
+COMMIT;
+
+END DN_IN_INVENTORY_CUSTODIAL;
+
+/

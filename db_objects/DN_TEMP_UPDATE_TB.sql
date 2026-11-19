@@ -1,0 +1,166 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_TEMP_UPDATE_TB
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_TEMP_UPDATE_TB" 
+AS
+
+ M_DATE                DATE;
+ MM_DATE               DATE;
+ M_FROMDATE            DATE;
+ M_TODATE              DATE;
+ M_COUNT               NUMBER;
+ J                     NUMBER;
+ MM_LAST_UPDATE        DATE;
+ MM_RESUM_DATE         DATE;
+ MMM_DATE              VARCHAR2(10);
+
+           --CREATED BY : NIRMALA FERNANDO
+           --CREATED ON : 18-07-2002
+           --SYSTEM     : DEALNET
+           --PURPOSE    : TO SUMMARIZE THE ACCOUNTS IN MAIN TABLE
+BEGIN
+/*M_COUNT := 0;
+J       := 0;
+
+M_FROMDATE:=TO_DATE(FROMDATE,'DD-MM-YYYY');
+M_TODATE:=TO_DATE(TODATE,'DD-MM-YYYY');
+MM_DATE:=TO_DATE(FROMDATE,'DD-MM-YYYY');
+
+SELECT TO_DATE(TODATE,'DD-MM-YYYY')-TO_DATE(FROMDATE,'DD-MM-YYYY')
+INTO M_COUNT
+FROM DUAL;
+
+FOR  J IN   0..M_COUNT  LOOP
+M_DATE :=MM_DATE +J;
+*/
+--PROCESS TO BE RUN FROM 20 HOURS TO NEXT DAY 5 HOURS-----------------------
+ IF(   ((TO_CHAR(SYSDATE,'HH24')>19)  AND  (TO_CHAR(SYSDATE,'HH24')!=5))  OR
+       ((TO_CHAR(SYSDATE,'HH24')<20)  AND  (TO_CHAR(SYSDATE,'HH24')<5))   ) THEN
+
+ SELECT LAST_UPDATE,RESUM_DATE,LAST_UPDATE+1
+ INTO   MM_LAST_UPDATE,MM_RESUM_DATE,M_DATE
+ FROM   DN_TEMP_TB;
+
+ IF(M_DATE<MM_RESUM_DATE)THEN
+ DELETE FROM DN_ACC_LICEN_INST_GEN_SUM
+ WHERE  TRNDATE =M_DATE ;
+
+ DELETE FROM DN_ACC_LICEN_INST_GEN_DETAIL
+ WHERE  TRNDATE =M_DATE ;
+ END IF;
+
+ MMM_DATE:=TO_CHAR(M_DATE,'DD-MM-YYYY');
+ -----------------------------------------
+ DN_ACC_BALANCE(MMM_DATE);
+ --------------------------------------
+
+COMMIT;
+
+  UPDATE DN_TEMP_TB
+  SET LAST_UPDATE   = M_DATE;
+    --  START_DATE    = TO_DATE(FROMDATE,'DD-MM-YYYY'),
+    --  LAST_DATE     = TO_DATE(TODATE,'DD-MM-YYYY');
+ COMMIT;
+
+ SELECT LAST_UPDATE,RESUM_DATE
+ INTO   MM_LAST_UPDATE,MM_RESUM_DATE
+ FROM   DN_TEMP_TB;
+
+
+ IF( MM_LAST_UPDATE>=MM_RESUM_DATE)THEN
+  UPDATE DN_TEMP_TB
+  SET    RESUM_DATE    = M_DATE;
+ END IF;
+ COMMIT;
+
+
+END IF ;--FOR TIME PERIOD SETTING
+END DN_TEMP_UPDATE_TB;
+-----------------------------------
+---------------------------------------
+--------------------------------------------------
+-----------------------------------------------------------
+/*PROCEDURE           DN_TEMP_UPDATE_TB
+(
+    FROMDATE    VARCHAR2,
+    TODATE      VARCHAR2
+)
+AS
+
+ M_DATE                DATE;
+ MM_DATE               DATE;
+ M_FROMDATE            DATE;
+ M_TODATE              DATE;
+ M_COUNT               NUMBER;
+ J                     NUMBER;
+ MM_LAST_UPDATE        DATE;
+ MM_RESUM_DATE         DATE;
+ MMM_DATE              VARCHAR2(10);
+
+           --CREATED BY : NIRMALA FERNANDO
+           --CREATED ON : 18-07-2002
+           --SYSTEM     : DEALNET
+           --PURPOSE    : TO SUMMARIZE THE ACCOUNTS IN MAIN TABLE
+BEGIN
+M_COUNT := 0;
+J       := 0;
+
+M_FROMDATE:=TO_DATE(FROMDATE,'DD-MM-YYYY');
+M_TODATE:=TO_DATE(TODATE,'DD-MM-YYYY');
+MM_DATE:=TO_DATE(FROMDATE,'DD-MM-YYYY');
+
+SELECT TO_DATE(TODATE,'DD-MM-YYYY')-TO_DATE(FROMDATE,'DD-MM-YYYY')
+INTO M_COUNT
+FROM DUAL;
+
+FOR  J IN   0..M_COUNT  LOOP
+M_DATE :=MM_DATE +J;
+
+ SELECT LAST_UPDATE,RESUM_DATE
+ INTO   MM_LAST_UPDATE,MM_RESUM_DATE
+ FROM   DN_TEMP_TB;
+
+ IF(M_DATE<MM_RESUM_DATE)THEN
+ DELETE FROM DN_ACC_LICEN_INST_GEN_SUM
+ WHERE  TRNDATE =M_DATE ;
+
+ DELETE FROM DN_ACC_LICEN_INST_GEN_DETAIL
+ WHERE  TRNDATE =M_DATE ;
+ END IF;
+
+ MMM_DATE:=TO_CHAR(M_DATE,'DD-MM-YYYY');
+ -----------------------------------------
+ DN_ACC_BALANCE(MMM_DATE);
+ --------------------------------------
+
+COMMIT;
+
+  UPDATE DN_TEMP_TB
+  SET LAST_UPDATE   = M_DATE,
+      START_DATE    = TO_DATE(FROMDATE,'DD-MM-YYYY'),
+      LAST_DATE     = TO_DATE(TODATE,'DD-MM-YYYY');
+ COMMIT;
+
+ SELECT LAST_UPDATE,RESUM_DATE
+ INTO   MM_LAST_UPDATE,MM_RESUM_DATE
+ FROM   DN_TEMP_TB;
+
+
+ IF( MM_LAST_UPDATE>=MM_RESUM_DATE)THEN
+  UPDATE DN_TEMP_TB
+  SET    RESUM_DATE    = M_DATE;
+ END IF;
+ COMMIT;
+
+
+
+END LOOP;
+
+
+COMMIT;
+END DN_TEMP_UPDATE_TB;
+*/
+
+/

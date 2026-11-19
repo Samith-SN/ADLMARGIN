@@ -1,0 +1,25 @@
+--------------------------------------------------------
+--  DDL for Procedure DN_SCREEN_NAME_DISPLAY
+--------------------------------------------------------
+set define off;
+
+  CREATE OR REPLACE EDITIONABLE PROCEDURE "ADLMARGIN"."DN_SCREEN_NAME_DISPLAY" 
+(
+M_OPTION_NAME            DN_REF_SCREEN_USER.OPTION_NAME%TYPE,
+--M_MENU_NAME              REF_SCREEN_USER.MENU_NAME%TYPE,
+M_GETDATA    IN OUT      SASIAPLSQLTAB.SEC_SUM
+)
+IS
+
+BEGIN
+OPEN M_GETDATA FOR
+        SELECT DISPLAY_NAME,ROW_ID,SUBOPT_STATUS,SCREEN_NAME
+        FROM   DN_REF_SCREEN_USER
+        WHERE  OPTION_NAME=M_OPTION_NAME AND
+               SCREEN_LEVEL=1 AND
+               --MENU_NAME=M_MENU_NAME AND
+               DISPLAY_STATUS='Y'
+               ORDER BY TO_NUMBER(ROW_ID);
+END DN_SCREEN_NAME_DISPLAY;
+
+/
